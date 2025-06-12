@@ -46,7 +46,7 @@ export default function RegisterForm() {
         });
       }
       toast({ title: 'Başarılı!', description: 'Hesabınız oluşturuldu. Giriş yapılıyor...' });
-      router.push('/dashboard'); // AuthProvider also handles redirect
+      router.push('/dashboard');
     } catch (error: any) {
       console.error("Registration error:", error);
       const errorCode = error.code;
@@ -57,6 +57,9 @@ export default function RegisterForm() {
         errorMessage = 'Geçersiz e-posta formatı.';
       } else if (errorCode === 'auth/weak-password') {
         errorMessage = 'Şifre çok zayıf. Daha güçlü bir şifre deneyin.';
+      } else if (errorCode === 'auth/configuration-not-found') {
+        errorMessage = 'Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda E-posta/Şifre ile giriş yönteminin etkinleştirildiğinden emin olun.';
+        console.error("Firebase auth/configuration-not-found: Ensure Email/Password sign-in is enabled in your Firebase project console.");
       }
       toast({ title: 'Hata', description: errorMessage, variant: 'destructive' });
     } finally {

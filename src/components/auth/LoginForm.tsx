@@ -37,7 +37,7 @@ export default function LoginForm() {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: 'Başarılı!', description: 'Giriş yapıldı.' });
-      router.push('/dashboard'); // AuthProvider also handles this redirect
+      router.push('/dashboard');
     } catch (error: any) {
       console.error("Login error:", error);
       const errorCode = error.code;
@@ -46,6 +46,9 @@ export default function LoginForm() {
         errorMessage = 'E-posta veya şifre yanlış.';
       } else if (errorCode === 'auth/invalid-email') {
         errorMessage = 'Geçersiz e-posta formatı.';
+      } else if (errorCode === 'auth/configuration-not-found') {
+        errorMessage = 'Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda E-posta/Şifre ile giriş yönteminin etkinleştirildiğinden emin olun.';
+        console.error("Firebase auth/configuration-not-found: Ensure Email/Password sign-in is enabled in your Firebase project console.");
       }
       toast({ title: 'Hata', description: errorMessage, variant: 'destructive' });
     } finally {
@@ -58,10 +61,19 @@ export default function LoginForm() {
     try {
       await signInWithPopup(auth, googleProvider);
       toast({ title: 'Başarılı!', description: 'Google ile giriş yapıldı.' });
-      router.push('/dashboard'); // AuthProvider also handles this redirect
+      router.push('/dashboard');
     } catch (error: any) {
       console.error("Google Sign-In error:", error);
-      toast({ title: 'Hata', description: 'Google ile giriş yapılamadı. Lütfen tekrar deneyin.', variant: 'destructive' });
+      let errorMessage = 'Google ile giriş yapılamadı. Lütfen tekrar deneyin.';
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Google giriş penceresi kapatıldı.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = 'Google giriş isteği iptal edildi.';
+      } else if (error.code === 'auth/configuration-not-found') {
+         errorMessage = 'Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda Google ile giriş yönteminin etkinleştirildiğinden emin olun.';
+         console.error("Firebase auth/configuration-not-found: Ensure Google sign-in is enabled in your Firebase project console.");
+      }
+      toast({ title: 'Hata', description: errorMessage, variant: 'destructive' });
     } finally {
       setIsGoogleLoading(false);
     }
