@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
 import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
+import { generatePhoneticPronunciation } from '@/ai/flows/generate-phonetic-pronunciation-flow';
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -20,6 +21,7 @@ const wordSchema = z.object({
   text: z.string().min(1, 'Word is required'),
   category: z.enum(['Bad', 'Good', 'Very Good'], { required_error: 'Category is required' }),
   pronunciationText: z.string().optional(),
+  turkishMeaning: z.string().optional(),
   exampleSentence: z.string().min(1, 'Example sentence is required'),
 });
 
@@ -41,11 +43,13 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
       text: '',
       category: 'Good',
       pronunciationText: '',
+      turkishMeaning: '',
       exampleSentence: '',
     },
   });
   const { toast } = useToast();
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
+  const [isGeneratingPhonetic, setIsGeneratingPhonetic] = useState(false);
 
   useEffect(() => {
     if (isOpen) { 
@@ -54,6 +58,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           text: editingWord.text,
           category: editingWord.category,
           pronunciationText: editingWord.pronunciationText || '',
+          turkishMeaning: editingWord.turkishMeaning || '',
           exampleSentence: editingWord.exampleSentence,
         });
       } else {
@@ -61,6 +66,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           text: '',
           category: 'Good',
           pronunciationText: '',
+          turkishMeaning: '',
           exampleSentence: '',
         });
       }
@@ -97,7 +103,6 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           description: "An example sentence has been generated for you.",
         });
       } else {
-        // This case should ideally be handled by the flow returning an error if output is null
         throw new Error("AI did not return an example sentence.");
       }
     } catch (error) {
@@ -109,6 +114,41 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
       });
     } finally {
       setIsGeneratingExample(false);
+    }
+  };
+
+  const handleGeneratePhonetic = async () => {
+    const wordText = getValues("text");
+    if (!wordText) {
+      toast({
+        title: "Word Required",
+        description: "Please enter a word before generating phonetic pronunciation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingPhonetic(true);
+    try {
+      const result = await generatePhoneticPronunciation({ word: wordText });
+      if (result.phoneticPronunciation) {
+        setValue("pronunciationText", result.phoneticPronunciation, { shouldValidate: true });
+        toast({
+          title: "Phonetic Pronunciation Generated",
+          description: "Phonetic pronunciation has been generated for you.",
+        });
+      } else {
+         throw new Error("AI did not return a phonetic pronunciation.");
+      }
+    } catch (error) {
+      console.error("Failed to generate phonetic pronunciation:", error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Could not generate phonetic pronunciation. Please try again or write one manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPhonetic(false);
     }
   };
 
@@ -133,6 +173,12 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           </div>
 
           <div>
+            <Label htmlFor="turkishMeaning" className="font-semibold">Turkish Meaning</Label>
+            <Input id="turkishMeaning" {...register('turkishMeaning')} placeholder="e.g., Tesadüf, Beklenmedik hoş buluş" className="mt-1" />
+            {errors.turkishMeaning && <p className="text-sm text-destructive mt-1">{errors.turkishMeaning.message}</p>}
+          </div>
+          
+          <div>
             <Label htmlFor="category" className="font-semibold">Category</Label>
             <Controller
               name="category"
@@ -153,9 +199,32 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
             {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
           </div>
 
-          <div>
-            <Label htmlFor="pronunciationText" className="font-semibold">Pronunciation (Phonetic)</Label>
-            <Input id="pronunciationText" {...register('pronunciationText')} placeholder="e.g., /ˌsɛrənˈdɪpɪti/" className="mt-1" />
+          <div className="space-y-1">
+            <div className="flex justify-between items-center mb-1">
+              <Label htmlFor="pronunciationText" className="font-semibold">Pronunciation (Phonetic)</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={handleGeneratePhonetic}
+                disabled={isGeneratingPhonetic}
+                className="text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent"
+              >
+                {isGeneratingPhonetic ? (
+                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1.5 h-3 w-3" />
+                )}
+                Generate with AI
+              </Button>
+            </div>
+            <Input 
+              id="pronunciationText" 
+              {...register('pronunciationText')} 
+              placeholder="e.g., /ˌsɛrənˈdɪpɪti/" 
+              className="mt-0" 
+              disabled={isGeneratingPhonetic}
+            />
           </div>
           
           <div>
