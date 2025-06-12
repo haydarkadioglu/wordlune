@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates an example sentence for a given word using an AI model.
@@ -10,12 +11,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateExampleSentenceInputSchema = z.object({
+const GenerateExampleSentenceInputSchema = z.object({
   word: z.string().describe('The word for which to generate an example sentence.'),
 });
 export type GenerateExampleSentenceInput = z.infer<typeof GenerateExampleSentenceInputSchema>;
 
-export const GenerateExampleSentenceOutputSchema = z.object({
+const GenerateExampleSentenceOutputSchema = z.object({
   exampleSentence: z.string().describe('The generated example sentence.'),
 });
 export type GenerateExampleSentenceOutput = z.infer<typeof GenerateExampleSentenceOutputSchema>;
