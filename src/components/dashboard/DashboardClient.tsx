@@ -7,77 +7,109 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Search, Filter, XCircle } from 'lucide-react';
+import { PlusCircle, Search, Filter, XCircle, Loader2 } from 'lucide-react';
 import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
 import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
 import { useToast } from "@/hooks/use-toast";
-
-// Sample data for initial state
-const initialWords: Word[] = [
-  { id: '1', text: 'Ephemeral', category: 'Good', pronunciationText: '/ɪˈfɛmərəl/', exampleSentence: 'The beauty of the cherry blossoms is ephemeral.', userId: 'sampleUser', createdAt: new Date('2024-07-15T10:00:00Z').getTime() },
-  { id: '2', text: 'Ubiquitous', category: 'Very Good', pronunciationText: '/juːˈbɪkwɪtəs/', exampleSentence: 'Smartphones have become ubiquitous in modern society.', userId: 'sampleUser', createdAt: new Date('2024-07-16T11:00:00Z').getTime() },
-  { id: '3', text: 'Obfuscate', category: 'Bad', pronunciationText: '/ˈɒbfʌskeɪt/', exampleSentence: 'The politician tried to obfuscate the issue with irrelevant details.', userId: 'sampleUser', createdAt: new Date('2024-07-17T12:00:00Z').getTime() },
-];
-
+import { db } from '@/lib/firebase';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardClient() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [words, setWords] = useState<Word[]>(initialWords); // Initialize with sample data
+  const [words, setWords] = useState<Word[]>([]);
+  const [loadingWords, setLoadingWords] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
 
-  // Load words from localStorage if available (simple persistence example)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedWords = localStorage.getItem('wordclass_words');
-      if (storedWords) {
-        setWords(JSON.parse(storedWords));
-      } else {
-         setWords(initialWords); // Fallback to initial if nothing in localStorage
-      }
+    if (user && user.uid) {
+      setLoadingWords(true);
+      const userWordsCol = collection(db, 'words', user.uid, 'userWords');
+      const q = query(userWordsCol, orderBy('createdAt', 'desc'));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedWords: Word[] = [];
+        querySnapshot.forEach((doc) => {
+          fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
+        });
+        setWords(fetchedWords);
+        setLoadingWords(false);
+      }, (error) => {
+        console.error("Error fetching words: ", error);
+        toast({ title: "Error fetching words", description: error.message, variant: "destructive" });
+        setLoadingWords(false);
+      });
+
+      return () => unsubscribe(); // Cleanup listener on unmount
+    } else {
+      setWords([]); // Clear words if no user
+      setLoadingWords(false);
     }
-  }, []);
+  }, [user, toast]);
 
-  // Save words to localStorage whenever they change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wordclass_words', JSON.stringify(words));
-    }
-  }, [words]);
-
-
-  const handleSaveWord = (newWordData: Omit<Word, 'id' | 'userId' | 'createdAt'>, id?: string) => {
-    if (!user) {
+  const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'userId' | 'createdAt'>, id?: string) => {
+    if (!user || !user.uid) {
       toast({ title: "Error", description: "You must be logged in to save words.", variant: "destructive" });
       return;
     }
 
-    if (id) { // Editing existing word
-      setWords(words.map(w => w.id === id ? { ...w, ...newWordData, userId: user.uid } : w));
-      toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
-    } else { // Adding new word
-      const wordWithMeta: Word = {
-        ...newWordData,
-        id: Date.now().toString(), // Simple ID generation
-        userId: user.uid,
-        createdAt: Date.now(),
-      };
-      setWords([wordWithMeta, ...words]);
-      toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
+    setLoadingWords(true); // Indicate activity
+    try {
+      if (id) { // Editing existing word
+        const wordDocRef = doc(db, 'words', user.uid, 'userWords', id);
+        // Ensure not to overwrite createdAt if not explicitly changed by user; for now, we update all fields.
+        await updateDoc(wordDocRef, {
+          ...newWordData,
+          // userId: user.uid, // userId is implicit by path and shouldn't change
+          // createdAt is managed by its initial value or explicit updates if desired
+        });
+        toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
+      } else { // Adding new word
+        const wordWithMeta = {
+          ...newWordData,
+          userId: user.uid,
+          createdAt: Date.now(),
+        };
+        const userWordsCol = collection(db, 'words', user.uid, 'userWords');
+        await addDoc(userWordsCol, wordWithMeta);
+        toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
+      }
+      setEditingWord(null);
+    } catch (error: any) {
+        console.error("Error saving word: ", error);
+        toast({ title: "Error saving word", description: error.message, variant: "destructive" });
+    } finally {
+        // setLoadingWords(false); // onSnapshot will update loading state
+        // No need to set loadingWords to false here if onSnapshot handles it,
+        // but if saving is a one-off without immediate UI feedback via snapshot, then yes.
+        // For simplicity, let snapshot handle the state.
     }
-    setEditingWord(null);
   };
 
-  const handleDeleteWord = (id: string) => {
+  const handleDeleteWord = async (id: string) => {
+    if (!user || !user.uid) {
+        toast({ title: "Error", description: "You must be logged in to delete words.", variant: "destructive" });
+        return;
+    }
     const wordToDelete = words.find(w => w.id === id);
-    setWords(words.filter(word => word.id !== id));
-    if (wordToDelete) {
-      toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });
+    setLoadingWords(true);
+    try {
+        const wordDocRef = doc(db, 'words', user.uid, 'userWords', id);
+        await deleteDoc(wordDocRef);
+        if (wordToDelete) {
+          toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });
+        }
+    } catch (error: any) {
+        console.error("Error deleting word: ", error);
+        toast({ title: "Error deleting word", description: error.message, variant: "destructive" });
+    } finally {
+        // setLoadingWords(false); // onSnapshot will update loading state
     }
   };
   
@@ -87,14 +119,14 @@ export default function DashboardClient() {
   };
 
   const openAddDialog = () => {
-    setEditingWord(null); // Ensure not in edit mode
+    setEditingWord(null);
     setIsDialogOpen(true);
   };
 
   const filteredWords = useMemo(() => {
     return words.filter(word => {
       const matchesSearchTerm = word.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                word.exampleSentence.toLowerCase().includes(searchTerm.toLowerCase());
+                                (word.exampleSentence && word.exampleSentence.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = categoryFilter === 'All' || word.category === categoryFilter;
       return matchesSearchTerm && matchesCategory;
     });
@@ -104,6 +136,37 @@ export default function DashboardClient() {
     setSearchTerm('');
     setCategoryFilter('All');
   };
+  
+  const renderWordList = () => {
+    if (loadingWords && !user) { // Initial load before user is resolved
+        return (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
+                {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="shadow-lg">
+                        <CardHeader className="pb-3">
+                            <Skeleton className="h-6 w-3/4 bg-primary/20" />
+                            <Skeleton className="h-4 w-1/4 mt-1 bg-primary/10" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-5 w-1/2 mb-3 bg-primary/10" />
+                            <Skeleton className="h-8 w-full bg-primary/10" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        );
+    }
+     if (loadingWords && user) { // Loading words for an authenticated user
+        return (
+             <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="ml-4 text-muted-foreground">Loading your words...</p>
+            </div>
+        );
+    }
+    return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
+  }
+
 
   return (
     <div className="space-y-8">
@@ -113,7 +176,7 @@ export default function DashboardClient() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="font-headline text-2xl text-primary">Your Words</CardTitle>
-            <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
+            <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto" disabled={!user}>
               <PlusCircle className="mr-2 h-5 w-5" /> Add New Word
             </Button>
           </div>
@@ -128,6 +191,7 @@ export default function DashboardClient() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                disabled={!user || loadingWords}
               />
             </div>
             <div className="flex-grow sm:flex-grow-0 sm:w-48 relative">
@@ -135,6 +199,7 @@ export default function DashboardClient() {
                 <Select
                     value={categoryFilter}
                     onValueChange={(value) => setCategoryFilter(value as WordCategory | 'All')}
+                    disabled={!user || loadingWords}
                 >
                     <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Filter by category" />
@@ -148,12 +213,12 @@ export default function DashboardClient() {
                 </Select>
             </div>
             {(searchTerm || categoryFilter !== 'All') && (
-                <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary">
+                <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary" disabled={!user || loadingWords}>
                     <XCircle className="mr-2 h-4 w-4" /> Clear
                 </Button>
             )}
           </div>
-          <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />
+          {renderWordList()}
         </CardContent>
       </Card>
 
