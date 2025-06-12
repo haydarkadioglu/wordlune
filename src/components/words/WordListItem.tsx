@@ -1,9 +1,10 @@
+
 import type { Word } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CategoryLabel from './CategoryLabel';
 import { Button } from '@/components/ui/button';
-import { SpeakerLoudIcon, Trash2, Edit3 } from 'lucide-react';
+import { SpeakerIcon, Trash2, Edit3 } from 'lucide-react';
 
 interface WordListItemProps {
   word: Word;
@@ -35,7 +36,7 @@ export default function WordListItem({ word, onDelete, onEdit }: WordListItemPro
       <CardContent>
         {word.pronunciationText && (
           <div className="flex items-center space-x-2 mb-3 text-sm text-muted-foreground">
-            <SpeakerLoudIcon className="h-5 w-5 text-accent" />
+            <SpeakerIcon className="h-5 w-5 text-accent" />
             <span>{word.pronunciationText}</span>
           </div>
         )}
