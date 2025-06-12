@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useMemo, useEffect } from 'react';
 import type { Word, WordCategory } from '@/types';
@@ -5,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Search, Filter, XCircle } from 'lucide-react';
 import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
