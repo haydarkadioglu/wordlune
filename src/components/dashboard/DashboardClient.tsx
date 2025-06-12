@@ -14,7 +14,7 @@ import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardClient() {
@@ -30,8 +30,8 @@ export default function DashboardClient() {
   useEffect(() => {
     if (user && user.uid) {
       setLoadingWords(true);
-      const userWordsCol = collection(db, 'words', user.uid, 'userWords');
-      const q = query(userWordsCol, orderBy('createdAt', 'desc'));
+      const wordsCollectionRef = collection(db, 'words');
+      const q = query(wordsCollectionRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedWords: Word[] = [];
@@ -46,9 +46,9 @@ export default function DashboardClient() {
         setLoadingWords(false);
       });
 
-      return () => unsubscribe(); // Cleanup listener on unmount
+      return () => unsubscribe(); 
     } else {
-      setWords([]); // Clear words if no user
+      setWords([]); 
       setLoadingWords(false);
     }
   }, [user, toast]);
@@ -59,25 +59,22 @@ export default function DashboardClient() {
       return;
     }
 
-    setLoadingWords(true); // Indicate activity
+    // setLoadingWords(true); // Let onSnapshot handle visual updates
     try {
-      if (id) { // Editing existing word
-        const wordDocRef = doc(db, 'words', user.uid, 'userWords', id);
-        // Ensure not to overwrite createdAt if not explicitly changed by user; for now, we update all fields.
+      if (id) { 
+        const wordDocRef = doc(db, 'words', id);
         await updateDoc(wordDocRef, {
           ...newWordData,
-          // userId: user.uid, // userId is implicit by path and shouldn't change
-          // createdAt is managed by its initial value or explicit updates if desired
+          // userId remains the same, createdAt is not updated here unless explicitly part of newWordData
         });
         toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
-      } else { // Adding new word
+      } else { 
         const wordWithMeta = {
           ...newWordData,
           userId: user.uid,
           createdAt: Date.now(),
         };
-        const userWordsCol = collection(db, 'words', user.uid, 'userWords');
-        await addDoc(userWordsCol, wordWithMeta);
+        await addDoc(collection(db, 'words'), wordWithMeta);
         toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
       }
       setEditingWord(null);
@@ -85,10 +82,7 @@ export default function DashboardClient() {
         console.error("Error saving word: ", error);
         toast({ title: "Error saving word", description: error.message, variant: "destructive" });
     } finally {
-        // setLoadingWords(false); // onSnapshot will update loading state
-        // No need to set loadingWords to false here if onSnapshot handles it,
-        // but if saving is a one-off without immediate UI feedback via snapshot, then yes.
-        // For simplicity, let snapshot handle the state.
+        // setLoadingWords(false); // Let onSnapshot handle visual updates
     }
   };
 
@@ -98,9 +92,9 @@ export default function DashboardClient() {
         return;
     }
     const wordToDelete = words.find(w => w.id === id);
-    setLoadingWords(true);
+    // setLoadingWords(true); // Let onSnapshot handle visual updates
     try {
-        const wordDocRef = doc(db, 'words', user.uid, 'userWords', id);
+        const wordDocRef = doc(db, 'words', id);
         await deleteDoc(wordDocRef);
         if (wordToDelete) {
           toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });
@@ -109,7 +103,7 @@ export default function DashboardClient() {
         console.error("Error deleting word: ", error);
         toast({ title: "Error deleting word", description: error.message, variant: "destructive" });
     } finally {
-        // setLoadingWords(false); // onSnapshot will update loading state
+        // setLoadingWords(false); // Let onSnapshot handle visual updates
     }
   };
   
@@ -138,7 +132,7 @@ export default function DashboardClient() {
   };
   
   const renderWordList = () => {
-    if (loadingWords && !user) { // Initial load before user is resolved
+    if (loadingWords && !user) { 
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
                 {[...Array(3)].map((_, i) => (
@@ -156,7 +150,7 @@ export default function DashboardClient() {
             </div>
         );
     }
-     if (loadingWords && user) { // Loading words for an authenticated user
+     if (loadingWords && user) { 
         return (
              <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
