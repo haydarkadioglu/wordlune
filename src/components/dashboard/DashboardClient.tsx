@@ -31,13 +31,18 @@ export default function DashboardClient() {
     if (user && user.uid) {
       setLoadingWords(true);
       const wordsCollectionRef = collection(db, 'words');
-      const q = query(wordsCollectionRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+      // Temporarily removed orderBy('createdAt', 'desc') to avoid index error.
+      // For proper sorting, create the composite index in Firebase.
+      const q = query(wordsCollectionRef, where('userId', '==', user.uid));
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedWords: Word[] = [];
         querySnapshot.forEach((doc) => {
           fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
         });
+        // If sorting was removed, you might want to sort client-side here if needed,
+        // but it's less efficient than DB-side sorting with an index.
+        // Example: fetchedWords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setWords(fetchedWords);
         setLoadingWords(false);
       }, (error) => {
@@ -59,13 +64,11 @@ export default function DashboardClient() {
       return;
     }
 
-    // setLoadingWords(true); // Let onSnapshot handle visual updates
     try {
       if (id) { 
         const wordDocRef = doc(db, 'words', id);
         await updateDoc(wordDocRef, {
           ...newWordData,
-          // userId remains the same, createdAt is not updated here unless explicitly part of newWordData
         });
         toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
       } else { 
@@ -81,8 +84,6 @@ export default function DashboardClient() {
     } catch (error: any) {
         console.error("Error saving word: ", error);
         toast({ title: "Error saving word", description: error.message, variant: "destructive" });
-    } finally {
-        // setLoadingWords(false); // Let onSnapshot handle visual updates
     }
   };
 
@@ -92,7 +93,6 @@ export default function DashboardClient() {
         return;
     }
     const wordToDelete = words.find(w => w.id === id);
-    // setLoadingWords(true); // Let onSnapshot handle visual updates
     try {
         const wordDocRef = doc(db, 'words', id);
         await deleteDoc(wordDocRef);
@@ -102,8 +102,6 @@ export default function DashboardClient() {
     } catch (error: any) {
         console.error("Error deleting word: ", error);
         toast({ title: "Error deleting word", description: error.message, variant: "destructive" });
-    } finally {
-        // setLoadingWords(false); // Let onSnapshot handle visual updates
     }
   };
   
