@@ -48,7 +48,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
 
   useEffect(() => {
-    if (isOpen) { // Only reset form when dialog becomes visible or editingWord changes
+    if (isOpen) { 
       if (editingWord) {
         reset({
           text: editingWord.text,
@@ -73,7 +73,6 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
   };
   
   const handleDialogClose = () => {
-    // reset(); // Reset form when dialog is closed, handled by useEffect on isOpen
     onOpenChange(false);
   };
 
@@ -98,13 +97,14 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           description: "An example sentence has been generated for you.",
         });
       } else {
-        throw new Error("Empty response from AI.");
+        // This case should ideally be handled by the flow returning an error if output is null
+        throw new Error("AI did not return an example sentence.");
       }
     } catch (error) {
       console.error("Failed to generate example sentence:", error);
       toast({
         title: "Generation Failed",
-        description: "Could not generate an example sentence. Please try again or write one manually.",
+        description: error instanceof Error ? error.message : "Could not generate an example sentence. Please try again or write one manually.",
         variant: "destructive",
       });
     } finally {
@@ -165,7 +165,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           </div>
 
           <div className="space-y-1">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-1">
               <Label htmlFor="exampleSentence" className="font-semibold">Example Sentence</Label>
               <Button 
                 type="button" 
@@ -187,7 +187,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
               id="exampleSentence" 
               {...register('exampleSentence')} 
               placeholder="e.g., Finding a $20 bill in an old coat was a moment of serendipity." 
-              className="mt-1" 
+              className="mt-0" 
               disabled={isGeneratingExample}
             />
             {errors.exampleSentence && <p className="text-sm text-destructive mt-1">{errors.exampleSentence.message}</p>}
