@@ -1,4 +1,4 @@
-import LoginForm from '@/components/auth/LoginForm';
+
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
           data-ai-hint="abstract texture" 
         />
       </div>
-      <div className="relative z-10 flex flex-col items-center">
+      <div className="relative z-10 flex flex-col items-center text-center">
         <Image 
             src="https://placehold.co/150x150.png" 
             alt="WordClass Logo" 
@@ -22,7 +22,13 @@ export default function LoginPage() {
             className="mb-8 rounded-full shadow-lg"
             data-ai-hint="logo book" 
         />
-        <LoginForm />
+        <h1 className="text-2xl font-semibold text-primary mb-2">Login Temporarily Disabled</h1>
+        <p className="text-muted-foreground">
+          This application is currently configured to bypass login and use a mock user.
+        </p>
+        <p className="text-muted-foreground mt-1">
+          You should be automatically redirected to the dashboard.
+        </p>
       </div>
     </div>
   );
