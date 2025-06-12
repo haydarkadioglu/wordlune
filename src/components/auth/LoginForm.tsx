@@ -83,12 +83,12 @@ export default function LoginForm() {
     <div className="w-full max-w-md space-y-6">
       <div className="text-center">
         <Image 
-            src="https://placehold.co/100x100.png" 
+            src="https://placehold.co/80x80.png" 
             alt="WordClass Logo" 
             width={80} 
             height={80} 
             className="mx-auto mb-4 rounded-lg shadow-md"
-            data-ai-hint="logo book" 
+            data-ai-hint="wordclass logo W" 
         />
         <h2 className="text-3xl font-bold tracking-tight text-primary">WordClass'a Giriş Yap</h2>
         <p className="mt-2 text-sm text-muted-foreground">
