@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/dashboard/Header';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SettingsProvider } from '@/hooks/useSettings';
+import { SettingsProvider } from '@/components/auth/AuthProvider';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
