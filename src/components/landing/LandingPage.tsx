@@ -5,20 +5,66 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, BookOpen, BarChart3, ArrowRight } from 'lucide-react';
+import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Logo from '@/components/common/Logo';
+import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 
 const Header = () => {
   const { user, loading } = useAuth();
+  const { uiLanguage, setUiLanguage } = useSettings();
+  const [theme, setTheme] = useState('light');
+
+   useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (storedTheme) setTheme(storedTheme);
+    else if (systemPrefersDark) setTheme('dark');
+    else setTheme('light');
+  }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
 
   return (
     <header className="py-4 px-4 sm:px-6 lg:px-8 bg-transparent absolute top-0 left-0 right-0 z-20">
       <div className="container mx-auto flex justify-between items-center">
         <Logo />
-        <nav className="flex items-center space-x-2 sm:space-x-4">
+        <nav className="flex items-center space-x-1 sm:space-x-2">
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Change language">
+                <Languages className="h-5 w-5 text-primary" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SUPPORTED_UI_LANGUAGES.map(lang => (
+                <DropdownMenuItem key={lang.code} onSelect={() => setUiLanguage(lang.code)} className={uiLanguage === lang.code ? "bg-accent" : ""}>
+                  {lang.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="text-primary">
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
+
           {loading ? null : user ? (
             <Link href="/dashboard" passHref>
               <Button variant="outline" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground">
@@ -49,13 +95,11 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If user is logged in, redirect to dashboard
     if (!loading && user) {
       router.replace('/dashboard');
     }
   }, [user, loading, router]);
 
-  // Show a loading/redirecting screen while checking auth state or if user is logged in
   if (loading || user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">

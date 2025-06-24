@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogOut, Sun, Moon, Cog } from 'lucide-react';
+import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
 import Logo from '@/components/common/Logo';
+import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const { user, signOut } = useAuth();
+  const { uiLanguage, setUiLanguage } = useSettings();
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
@@ -50,6 +53,22 @@ export default function Header() {
               Welcome, <span className="font-semibold text-primary">{user.displayName || user.email}</span>
             </p>
           )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Change language">
+                <Languages className="h-5 w-5 text-primary" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SUPPORTED_UI_LANGUAGES.map(lang => (
+                <DropdownMenuItem key={lang.code} onSelect={() => setUiLanguage(lang.code)} className={uiLanguage === lang.code ? "bg-accent" : ""}>
+                  {lang.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Link href="/dashboard/settings" passHref>
              <Button variant="ghost" size="icon" aria-label="Settings" className="text-primary">
                 <Cog className="h-5 w-5" />
