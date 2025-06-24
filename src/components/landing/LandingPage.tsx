@@ -9,15 +9,7 @@ import { Zap, BookOpen, BarChart3, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-
-const Logo = () => (
-  <Link href="/" className="flex items-center space-x-2 group">
-    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary transition-all duration-300 group-hover:bg-accent">
-      <span className="text-3xl font-bold text-primary-foreground">W</span>
-    </div>
-    <span className="text-2xl font-bold text-primary transition-colors duration-300 group-hover:text-accent">WordLune</span>
-  </Link>
-);
+import Logo from '@/components/common/Logo';
 
 const Header = () => {
   const { user, loading } = useAuth();
@@ -37,7 +29,7 @@ const Header = () => {
           ) : (
             <>
               <Link href="/login" passHref>
-                <Button variant="ghost" className="text-primary hover:text-accent">Login</Button>
+                <Button variant="ghost" className="text-primary">Login</Button>
               </Link>
               <Link href="/register" passHref>
                 <Button className="bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground">
