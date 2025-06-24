@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/dashboard/Header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SettingsProvider } from '@/hooks/useSettings';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -40,14 +41,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
-        {children}
-      </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} WordClass. All rights reserved.
-      </footer>
-    </div>
+    <SettingsProvider>
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
+        <footer className="py-4 text-center text-sm text-muted-foreground border-t">
+          © {new Date().getFullYear()} WordClass. All rights reserved.
+        </footer>
+      </div>
+    </SettingsProvider>
   );
 }

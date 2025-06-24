@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Word, WordCategory } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
 import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
+import QuickTranslator from './QuickTranslator'; // New component
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
@@ -24,6 +25,7 @@ export default function DashboardClient() {
   const [loadingWords, setLoadingWords] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
+  const [preFilledWord, setPreFilledWord] = useState<Partial<Word> | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
 
@@ -31,8 +33,6 @@ export default function DashboardClient() {
     if (user && user.uid) {
       setLoadingWords(true);
       const wordsCollectionRef = collection(db, 'words');
-      // Temporarily removed orderBy('createdAt', 'desc') to avoid index error.
-      // For proper sorting, create the composite index in Firebase.
       const q = query(wordsCollectionRef, where('userId', '==', user.uid));
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -40,9 +40,7 @@ export default function DashboardClient() {
         querySnapshot.forEach((doc) => {
           fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
         });
-        // If sorting was removed, you might want to sort client-side here if needed,
-        // but it's less efficient than DB-side sorting with an index.
-        // Example: fetchedWords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        fetchedWords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setWords(fetchedWords);
         setLoadingWords(false);
       }, (error) => {
@@ -67,20 +65,15 @@ export default function DashboardClient() {
     try {
       if (id) { 
         const wordDocRef = doc(db, 'words', id);
-        await updateDoc(wordDocRef, {
-          ...newWordData,
-        });
+        await updateDoc(wordDocRef, { ...newWordData });
         toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
       } else { 
-        const wordWithMeta = {
-          ...newWordData,
-          userId: user.uid,
-          createdAt: Date.now(),
-        };
+        const wordWithMeta = { ...newWordData, userId: user.uid, createdAt: Date.now() };
         await addDoc(collection(db, 'words'), wordWithMeta);
         toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
       }
       setEditingWord(null);
+      setPreFilledWord(null);
     } catch (error: any) {
         console.error("Error saving word: ", error);
         toast({ title: "Error saving word", description: error.message, variant: "destructive" });
@@ -107,13 +100,21 @@ export default function DashboardClient() {
   
   const handleEditWord = (word: Word) => {
     setEditingWord(word);
+    setPreFilledWord(null);
     setIsDialogOpen(true);
   };
 
   const openAddDialog = () => {
     setEditingWord(null);
+    setPreFilledWord(null);
     setIsDialogOpen(true);
   };
+
+  const handleAddFromTranslator = useCallback((word: string, meaning: string) => {
+    setPreFilledWord({ text: word, meaning: meaning });
+    setEditingWord(null);
+    setIsDialogOpen(true);
+  }, []);
 
   const filteredWords = useMemo(() => {
     return words.filter(word => {
@@ -130,25 +131,7 @@ export default function DashboardClient() {
   };
   
   const renderWordList = () => {
-    if (loadingWords && !user) { 
-        return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
-                {[...Array(3)].map((_, i) => (
-                    <Card key={i} className="shadow-lg">
-                        <CardHeader className="pb-3">
-                            <Skeleton className="h-6 w-3/4 bg-primary/20" />
-                            <Skeleton className="h-4 w-1/4 mt-1 bg-primary/10" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-5 w-1/2 mb-3 bg-primary/10" />
-                            <Skeleton className="h-8 w-full bg-primary/10" />
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        );
-    }
-     if (loadingWords && user) { 
+     if (loadingWords) { 
         return (
              <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -159,10 +142,11 @@ export default function DashboardClient() {
     return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
   }
 
-
   return (
     <div className="space-y-8">
       <StatsDisplay words={words} />
+      
+      <QuickTranslator onAddWord={handleAddFromTranslator} />
       
       <Card className="shadow-lg">
         <CardHeader>
@@ -221,6 +205,7 @@ export default function DashboardClient() {
         onOpenChange={setIsDialogOpen}
         onSaveWord={handleSaveWord}
         editingWord={editingWord}
+        preFilledWord={preFilledWord}
       />
     </div>
   );

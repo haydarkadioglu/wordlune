@@ -11,17 +11,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Sparkles, Loader2, Languages } from 'lucide-react';
 import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
 import { generatePhoneticPronunciation } from '@/ai/flows/generate-phonetic-pronunciation-flow';
+import { translateWord } from '@/ai/flows/translate-word-flow';
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from '@/hooks/useSettings';
 
 
 const wordSchema = z.object({
   text: z.string().min(1, 'Word is required'),
   category: z.enum(['Bad', 'Good', 'Very Good'], { required_error: 'Category is required' }),
   pronunciationText: z.string().optional(),
-  turkishMeaning: z.string().optional(),
+  meaning: z.string().optional(),
   exampleSentence: z.string().min(1, 'Example sentence is required'),
 });
 
@@ -32,46 +34,47 @@ interface AddWordDialogProps {
   onOpenChange: (open: boolean) => void;
   onSaveWord: (word: Omit<Word, 'id' | 'userId' | 'createdAt'>, id?: string) => void;
   editingWord?: Word | null;
+  preFilledWord?: Partial<Word> | null;
 }
 
 const categories: WordCategory[] = ['Bad', 'Good', 'Very Good'];
 
-export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editingWord }: AddWordDialogProps) {
+export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editingWord, preFilledWord }: AddWordDialogProps) {
   const { control, register, handleSubmit, reset, formState: { errors }, getValues, setValue } = useForm<WordFormData>({
     resolver: zodResolver(wordSchema),
     defaultValues: {
       text: '',
       category: 'Good',
       pronunciationText: '',
-      turkishMeaning: '',
+      meaning: '',
       exampleSentence: '',
     },
   });
   const { toast } = useToast();
+  const { sourceLanguage, targetLanguage } = useSettings();
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
   const [isGeneratingPhonetic, setIsGeneratingPhonetic] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
-    if (isOpen) { 
+    if (isOpen) {
+      const defaultValues = {
+        text: '',
+        category: 'Good' as WordCategory,
+        pronunciationText: '',
+        meaning: '',
+        exampleSentence: '',
+      };
+
       if (editingWord) {
-        reset({
-          text: editingWord.text,
-          category: editingWord.category,
-          pronunciationText: editingWord.pronunciationText || '',
-          turkishMeaning: editingWord.turkishMeaning || '',
-          exampleSentence: editingWord.exampleSentence,
-        });
+        reset({ ...defaultValues, ...editingWord });
+      } else if (preFilledWord) {
+        reset({ ...defaultValues, ...preFilledWord });
       } else {
-        reset({
-          text: '',
-          category: 'Good',
-          pronunciationText: '',
-          turkishMeaning: '',
-          exampleSentence: '',
-        });
+        reset(defaultValues);
       }
     }
-  }, [editingWord, reset, isOpen]);
+  }, [editingWord, preFilledWord, reset, isOpen]);
 
   const onSubmit = (data: WordFormData) => {
     onSaveWord(data, editingWord?.id);
@@ -82,76 +85,76 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
     onOpenChange(false);
   };
 
-  const handleGenerateExample = async () => {
-    const wordText = getValues("text");
+  const handleAIGeneration = async (
+    action: 'example' | 'phonetic' | 'translate',
+    wordText: string
+  ) => {
     if (!wordText) {
       toast({
         title: "Word Required",
-        description: "Please enter a word before generating an example.",
+        description: "Please enter a word first.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsGeneratingExample(true);
+    const setters = {
+        example: setIsGeneratingExample,
+        phonetic: setIsGeneratingPhonetic,
+        translate: setIsTranslating,
+    };
+    const runningSetter = setters[action];
+    runningSetter(true);
+
     try {
-      const result = await generateExampleSentence({ word: wordText });
-      if (result.exampleSentence) {
-        setValue("exampleSentence", result.exampleSentence, { shouldValidate: true });
-        toast({
-          title: "Example Generated",
-          description: "An example sentence has been generated for you.",
-        });
-      } else {
-        throw new Error("AI did not return an example sentence.");
-      }
+        let result, fieldToSet, successMessage;
+        if (action === 'example') {
+            result = await generateExampleSentence({ word: wordText });
+            fieldToSet = 'exampleSentence';
+            successMessage = 'Example sentence generated.';
+        } else if (action === 'phonetic') {
+            result = await generatePhoneticPronunciation({ word: wordText });
+            fieldToSet = 'pronunciationText';
+            successMessage = 'Phonetic pronunciation generated.';
+        } else { // translate
+            result = await translateWord({ word: wordText, sourceLanguage, targetLanguage });
+            fieldToSet = 'meaning';
+            successMessage = 'Translation generated.';
+        }
+
+        const value = action === 'translate' ? (result as any).translations?.join(', ') : (result as any)[fieldToSet];
+        
+        if (value) {
+            setValue(fieldToSet as any, value, { shouldValidate: true });
+            toast({ title: "Success", description: successMessage });
+        } else {
+            throw new Error("AI did not return a valid result.");
+        }
     } catch (error) {
-      console.error("Failed to generate example sentence:", error);
+      console.error(`Failed to generate ${action}:`, error);
       toast({
         title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Could not generate an example sentence. Please try again or write one manually.",
+        description: error instanceof Error ? error.message : `Could not generate ${action}.`,
         variant: "destructive",
       });
     } finally {
-      setIsGeneratingExample(false);
+      runningSetter(false);
     }
   };
 
-  const handleGeneratePhonetic = async () => {
-    const wordText = getValues("text");
-    if (!wordText) {
-      toast({
-        title: "Word Required",
-        description: "Please enter a word before generating phonetic pronunciation.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGeneratingPhonetic(true);
-    try {
-      const result = await generatePhoneticPronunciation({ word: wordText });
-      if (result.phoneticPronunciation) {
-        setValue("pronunciationText", result.phoneticPronunciation, { shouldValidate: true });
-        toast({
-          title: "Phonetic Pronunciation Generated",
-          description: "Phonetic pronunciation has been generated for you.",
-        });
-      } else {
-         throw new Error("AI did not return a phonetic pronunciation.");
-      }
-    } catch (error) {
-      console.error("Failed to generate phonetic pronunciation:", error);
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Could not generate phonetic pronunciation. Please try again or write one manually.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingPhonetic(false);
-    }
-  };
-
+  const AiButton = ({ action, disabled, className }: { action: 'example' | 'phonetic' | 'translate', disabled: boolean, className?: string }) => (
+    <Button 
+        type="button" 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleAIGeneration(action, getValues("text"))}
+        disabled={disabled}
+        className={`text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent ${className}`}
+    >
+        {disabled ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3" />}
+        {action === 'translate' ? 'Translate' : 'Generate'}
+    </Button>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
@@ -172,10 +175,13 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
             {errors.text && <p className="text-sm text-destructive mt-1">{errors.text.message}</p>}
           </div>
 
-          <div>
-            <Label htmlFor="turkishMeaning" className="font-semibold">Turkish Meaning</Label>
-            <Input id="turkishMeaning" {...register('turkishMeaning')} placeholder="e.g., Tesadüf, Beklenmedik hoş buluş" className="mt-1" />
-            {errors.turkishMeaning && <p className="text-sm text-destructive mt-1">{errors.turkishMeaning.message}</p>}
+          <div className="space-y-1">
+            <div className="flex justify-between items-center mb-1">
+              <Label htmlFor="meaning" className="font-semibold">Meaning ({targetLanguage})</Label>
+              <AiButton action="translate" disabled={isTranslating} />
+            </div>
+            <Input id="meaning" {...register('meaning')} placeholder="e.g., Tesadüf, Beklenmedik hoş buluş" className="mt-0" />
+            {errors.meaning && <p className="text-sm text-destructive mt-1">{errors.meaning.message}</p>}
           </div>
           
           <div>
@@ -202,21 +208,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-1">
               <Label htmlFor="pronunciationText" className="font-semibold">Pronunciation (Phonetic)</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleGeneratePhonetic}
-                disabled={isGeneratingPhonetic}
-                className="text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent"
-              >
-                {isGeneratingPhonetic ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-1.5 h-3 w-3" />
-                )}
-                Generate with AI
-              </Button>
+              <AiButton action="phonetic" disabled={isGeneratingPhonetic} />
             </div>
             <Input 
               id="pronunciationText" 
@@ -226,31 +218,11 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
               disabled={isGeneratingPhonetic}
             />
           </div>
-          
-          <div>
-            <Label htmlFor="pronunciationAudio" className="font-semibold">Pronunciation (Audio)</Label>
-            <Input id="pronunciationAudio" type="file" disabled className="mt-1 file:text-sm file:font-medium file:text-primary file:bg-primary/10 file:border-0 file:rounded-md file:px-3 file:py-1.5 hover:file:bg-primary/20" />
-            <p className="text-xs text-muted-foreground mt-1">Audio upload is a planned feature.</p>
-          </div>
 
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-1">
               <Label htmlFor="exampleSentence" className="font-semibold">Example Sentence</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleGenerateExample}
-                disabled={isGeneratingExample}
-                className="text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent"
-              >
-                {isGeneratingExample ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-1.5 h-3 w-3" />
-                )}
-                Generate with AI
-              </Button>
+              <AiButton action="example" disabled={isGeneratingExample} />
             </div>
             <Textarea 
               id="exampleSentence" 
