@@ -5,8 +5,8 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'WordClass - Master Your Vocabulary',
-  description: 'Save, categorize, and learn new English words with WordClass.',
+  title: 'WordLune - Master Your Vocabulary',
+  description: 'Save, categorize, and learn new English words with WordLune.',
 };
 
 export default function RootLayout({

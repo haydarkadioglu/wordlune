@@ -19,7 +19,7 @@ import { useSettings } from '@/hooks/useSettings';
 
 const translations = {
   en: {
-    title: "Sign in to WordClass",
+    title: "Sign in to WordLune",
     description: "Continue to improve your vocabulary!",
     emailLabel: "Email",
     emailPlaceholder: "example@email.com",
@@ -44,7 +44,7 @@ const translations = {
     passwordMinLengthZod: "Password must be at least 6 characters.",
   },
   tr: {
-    title: "WordClass'a Giriş Yap",
+    title: "WordLune'a Giriş Yap",
     description: "Kelime hazinenizi geliştirmeye devam edin!",
     emailLabel: "E-posta",
     emailPlaceholder: "ornek@eposta.com",
@@ -148,11 +148,11 @@ export default function LoginForm() {
       <div className="text-center">
         <Image 
             src="https://placehold.co/80x80.png" 
-            alt="WordClass Logo" 
+            alt="WordLune Logo" 
             width={80} 
             height={80} 
             className="mx-auto mb-4 rounded-lg shadow-md"
-            data-ai-hint="wordclass logo W" 
+            data-ai-hint="wordlune logo W" 
         />
         <h2 className="text-3xl font-bold tracking-tight text-primary">{t.title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">

@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="py-4 text-center text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} WordClass. All rights reserved.
+        © {new Date().getFullYear()} WordLune. All rights reserved.
       </footer>
     </div>
   );

@@ -46,12 +46,12 @@ export default function Header() {
         <div className="flex items-center space-x-3">
           <Image 
             src="https://placehold.co/40x40.png" 
-            alt="WordClass Logo" 
+            alt="WordLune Logo" 
             width={40} 
             height={40} 
             className="rounded-md" 
-            data-ai-hint="wordclass logo W" />
-          <h1 className="text-2xl font-headline text-primary">WordClass</h1>
+            data-ai-hint="wordlune logo W" />
+          <h1 className="text-2xl font-headline text-primary">WordLune</h1>
         </div>
         <div className="flex items-center space-x-2">
           {user && (

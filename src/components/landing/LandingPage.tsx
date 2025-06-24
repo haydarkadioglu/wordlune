@@ -15,7 +15,7 @@ const Logo = () => (
     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary transition-all duration-300 group-hover:bg-accent">
       <span className="text-3xl font-bold text-primary-foreground">W</span>
     </div>
-    <span className="text-2xl font-bold text-primary transition-colors duration-300 group-hover:text-accent">WordClass</span>
+    <span className="text-2xl font-bold text-primary transition-colors duration-300 group-hover:text-accent">WordLune</span>
   </Link>
 );
 
@@ -96,7 +96,7 @@ export default function LandingPage() {
               Master Vocabulary with AI
             </h1>
             <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-              WordClass is the smart way to save, practice, and truly learn new words. Stop forgetting, start mastering.
+              WordLune is the smart way to save, practice, and truly learn new words. Stop forgetting, start mastering.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Link href="/register" passHref>
@@ -161,7 +161,7 @@ export default function LandingPage() {
           <div className="flex justify-center mb-4">
              <Logo />
           </div>
-          © {new Date().getFullYear()} WordClass. All rights reserved.
+          © {new Date().getFullYear()} WordLune. All rights reserved.
         </div>
       </footer>
     </div>
