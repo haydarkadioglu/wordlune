@@ -13,13 +13,21 @@ import { SettingsContext } from '@/hooks/useSettings';
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [sourceLanguage, setSourceLanguageState] = useState<string>('English');
   const [targetLanguage, setTargetLanguageState] = useState<string>('Turkish');
+  const [uiLanguage, setUiLanguageState] = useState<string>('tr');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const savedSource = localStorage.getItem('sourceLanguage');
     const savedTarget = localStorage.getItem('targetLanguage');
+    const savedUiLang = localStorage.getItem('uiLanguage');
     if (savedSource) setSourceLanguageState(savedSource);
     if (savedTarget) setTargetLanguageState(savedTarget);
+    if (savedUiLang) {
+        setUiLanguageState(savedUiLang);
+        document.documentElement.lang = savedUiLang;
+    } else {
+        document.documentElement.lang = 'tr';
+    }
     setIsLoaded(true);
   }, []);
 
@@ -32,13 +40,21 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('targetLanguage', lang);
     setTargetLanguageState(lang);
   };
+  
+  const setUiLanguage = (lang: string) => {
+    localStorage.setItem('uiLanguage', lang);
+    setUiLanguageState(lang);
+    document.documentElement.lang = lang;
+  };
 
   const value = useMemo(() => ({
     sourceLanguage,
     targetLanguage,
     setSourceLanguage,
     setTargetLanguage,
-  }), [sourceLanguage, targetLanguage]);
+    uiLanguage,
+    setUiLanguage,
+  }), [sourceLanguage, targetLanguage, uiLanguage]);
 
   if (!isLoaded) {
     return null; // Or a loading spinner, but null avoids hydration issues
@@ -114,5 +130,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   const value = { user, loading, signOut };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+        <SettingsProvider>
+            {children}
+        </SettingsProvider>
+    </AuthContext.Provider>
+  );
 };
