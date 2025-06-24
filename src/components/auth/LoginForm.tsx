@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
+import { logLoginHistory } from '@/lib/user-service';
 
 
 const translations = {
@@ -97,7 +98,8 @@ export default function LoginForm() {
   const onSubmit = async (data: LoginFormInputs) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      await logLoginHistory(userCredential.user.uid);
       toast({ title: t.successTitle, description: t.loginSuccess });
       router.push('/dashboard');
     } catch (error: any) {
@@ -121,7 +123,8 @@ export default function LoginForm() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      await logLoginHistory(result.user.uid);
       toast({ title: t.successTitle, description: t.loginSuccess });
       router.push('/dashboard');
     } catch (error: any) {

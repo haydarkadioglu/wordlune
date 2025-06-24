@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
+import { logLoginHistory } from '@/lib/user-service';
 
 
 const translations = {
@@ -119,6 +120,7 @@ export default function RegisterForm() {
           displayName: data.displayName,
         });
       }
+      await logLoginHistory(userCredential.user.uid);
       toast({ title: t.successTitle, description: t.accountCreated });
       router.push('/dashboard');
     } catch (error: any) {
@@ -144,7 +146,8 @@ export default function RegisterForm() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      await logLoginHistory(result.user.uid);
       toast({ title: t.successTitle, description: t.accountCreated });
       router.push('/dashboard');
     } catch (error: any) {

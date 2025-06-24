@@ -32,7 +32,7 @@ type WordFormData = z.infer<typeof wordSchema>;
 interface AddWordDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaveWord: (word: Omit<Word, 'id' | 'userId' | 'createdAt'>, id?: string) => void;
+  onSaveWord: (word: Omit<Word, 'id' | 'createdAt'>, id?: string) => void;
   editingWord?: Word | null;
   preFilledWord?: Partial<Word> | null;
 }

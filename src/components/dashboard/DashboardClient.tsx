@@ -12,10 +12,10 @@ import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
 import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
-import QuickTranslator from './QuickTranslator'; // New component
+import QuickTranslator from './QuickTranslator';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardClient() {
@@ -32,15 +32,14 @@ export default function DashboardClient() {
   useEffect(() => {
     if (user && user.uid) {
       setLoadingWords(true);
-      const wordsCollectionRef = collection(db, 'words');
-      const q = query(wordsCollectionRef, where('userId', '==', user.uid));
+      const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
+      const q = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedWords: Word[] = [];
         querySnapshot.forEach((doc) => {
           fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
         });
-        fetchedWords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setWords(fetchedWords);
         setLoadingWords(false);
       }, (error) => {
@@ -56,20 +55,21 @@ export default function DashboardClient() {
     }
   }, [user, toast]);
 
-  const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'userId' | 'createdAt'>, id?: string) => {
+  const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'createdAt'>, id?: string) => {
     if (!user || !user.uid) {
       toast({ title: "Error", description: "You must be logged in to save words.", variant: "destructive" });
       return;
     }
 
     try {
+      const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
       if (id) { 
-        const wordDocRef = doc(db, 'words', id);
+        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
         await updateDoc(wordDocRef, { ...newWordData });
         toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
       } else { 
-        const wordWithMeta = { ...newWordData, userId: user.uid, createdAt: Date.now() };
-        await addDoc(collection(db, 'words'), wordWithMeta);
+        const wordWithMeta = { ...newWordData, createdAt: Date.now() };
+        await addDoc(wordsCollectionRef, wordWithMeta);
         toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
       }
       setEditingWord(null);
@@ -87,7 +87,7 @@ export default function DashboardClient() {
     }
     const wordToDelete = words.find(w => w.id === id);
     try {
-        const wordDocRef = doc(db, 'words', id);
+        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
         await deleteDoc(wordDocRef);
         if (wordToDelete) {
           toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });

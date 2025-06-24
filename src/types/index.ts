@@ -10,7 +10,6 @@ export interface Word {
   category: WordCategory;
   pronunciationText?: string;
   exampleSentence: string;
-  meaning?: string; // Renamed from turkishMeaning
-  userId: string;
+  meaning?: string;
   createdAt: number; // timestamp
 }
