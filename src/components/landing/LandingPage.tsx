@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +12,7 @@ import { useEffect, useState } from 'react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from '@/lib/utils';
 
 
 const translations = {
@@ -116,21 +118,17 @@ const Header = () => {
           </Button>
 
           {loading ? null : user ? (
-            <Link href="/dashboard" passHref>
-              <Button variant="outline" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground">
+            <Link href="/dashboard" className={cn(buttonVariants({ variant: 'outline' }), 'text-primary border-primary hover:bg-primary hover:text-primary-foreground')}>
                 {t.dashboard}
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
             </Link>
           ) : (
             <>
-              <Link href="/login" passHref>
-                <Button variant="ghost" className="text-primary">{t.login}</Button>
+              <Link href="/login" className={cn(buttonVariants({ variant: 'ghost' }), "text-primary")}>
+                {t.login}
               </Link>
-              <Link href="/register" passHref>
-                <Button className="bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground">
-                  {t.signUp}
-                </Button>
+              <Link href="/register" className={cn(buttonVariants(), "bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground")}>
+                {t.signUp}
               </Link>
             </>
           )}
@@ -186,10 +184,8 @@ export default function LandingPage() {
               {t.heroSubtitle}
             </p>
             <div className="mt-8 flex justify-center gap-4">
-              <Link href="/register" passHref>
-                <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground shadow-lg hover:shadow-xl transition-shadow">
-                  {t.getStarted} <ArrowRight className="ml-2" />
-                </Button>
+              <Link href="/register" className={cn(buttonVariants({ size: 'lg' }), "bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground shadow-lg hover:shadow-xl transition-shadow")}>
+                {t.getStarted} <ArrowRight className="ml-2" />
               </Link>
             </div>
           </div>

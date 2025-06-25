@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
@@ -15,13 +15,12 @@ const NavLink = ({ href, children }: { href: string; children: React.ReactNode }
   const pathname = usePathname();
   const isActive = pathname === href;
   return (
-    <Link href={href} passHref>
-      <Button variant="ghost" className={cn(
-        "text-muted-foreground hover:text-primary",
-        isActive && "text-primary bg-primary/10"
-      )}>
-        {children}
-      </Button>
+    <Link href={href} className={cn(
+      buttonVariants({ variant: 'ghost' }),
+      "text-muted-foreground hover:text-primary",
+      isActive && "text-primary bg-primary/10"
+    )}>
+      {children}
     </Link>
   );
 };
@@ -92,11 +91,10 @@ export default function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link href="/dashboard/settings" passHref>
-             <Button variant="ghost" size="icon" aria-label="Settings" className="text-primary">
-                <Cog className="h-5 w-5" />
-            </Button>
+          <Link href="/dashboard/settings" aria-label="Settings" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-primary')}>
+              <Cog className="h-5 w-5" />
           </Link>
+
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="text-primary">
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>

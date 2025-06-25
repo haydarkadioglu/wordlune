@@ -6,13 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import type { UserList } from "@/types";
 import { getLists, deleteList } from "@/lib/list-service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ListPlus, Loader2, List, Trash2, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import CreateListDialog from "./CreateListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function ListsClient() {
     const { user } = useAuth();
@@ -109,10 +110,8 @@ export default function ListsClient() {
                                 <CardDescription>{list.wordCount || 0} words</CardDescription>
                             </CardHeader>
                             <CardContent className="flex items-center justify-between gap-2">
-                                <Link href={`/dashboard/lists/${list.id}`} passHref legacyBehavior>
-                                    <Button className="flex-grow">
-                                        View List <ArrowRight className="ml-2" />
-                                    </Button>
+                                <Link href={`/dashboard/lists/${list.id}`} className={cn(buttonVariants(), "flex-grow")}>
+                                    View List <ArrowRight className="ml-2" />
                                 </Link>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
