@@ -43,6 +43,7 @@ const translations = {
     googleConfigNotFound: "Firebase authentication configuration not found. Please ensure the Google sign-in method is enabled in your Firebase console.",
     invalidEmailZod: "Please enter a valid email address.",
     passwordMinLengthZod: "Password must be at least 6 characters.",
+    firebaseNotConfigured: "Firebase is not configured. Please check the console for errors.",
   },
   tr: {
     title: "WordLune'a Giriş Yap",
@@ -68,6 +69,7 @@ const translations = {
     googleConfigNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda Google ile giriş yönteminin etkinleştirildiğinden emin olun.",
     invalidEmailZod: "Geçerli bir e-posta adresi girin.",
     passwordMinLengthZod: "Şifre en az 6 karakter olmalıdır.",
+    firebaseNotConfigured: "Firebase yapılandırılmamış. Lütfen konsolu hatalar için kontrol edin.",
   }
 };
 
@@ -97,6 +99,11 @@ export default function LoginForm() {
 
   const onSubmit = async (data: LoginFormInputs) => {
     setIsLoading(true);
+    if (!auth) {
+      toast({ title: t.errorTitle, description: t.firebaseNotConfigured, variant: 'destructive' });
+      setIsLoading(false);
+      return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await logLoginHistory(userCredential.user.uid);
@@ -122,6 +129,11 @@ export default function LoginForm() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    if (!auth || !googleProvider) {
+      toast({ title: t.errorTitle, description: t.firebaseNotConfigured, variant: 'destructive' });
+      setIsGoogleLoading(false);
+      return;
+    }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await logLoginHistory(result.user.uid);

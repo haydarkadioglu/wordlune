@@ -88,6 +88,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const pathname = NextRouter.usePathname();
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return; // Firebase not initialized
+    }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser as User);
@@ -113,6 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   const signOut = async () => {
+    if (!auth) return;
     try {
       setLoading(true);
       await firebaseSignOut(auth);

@@ -49,6 +49,7 @@ const translations = {
     popupClosed: "Google sign-up window was closed.",
     popupCancelled: "Google sign-up request was cancelled.",
     googleConfigNotFound: "Firebase authentication configuration not found. Please ensure the Google sign-in method is enabled in your Firebase console.",
+    firebaseNotConfigured: "Firebase is not configured. Please check the console for errors.",
   },
   tr: {
     title: "WordLune'a Kayıt Olun",
@@ -80,6 +81,7 @@ const translations = {
     popupClosed: "Google kayıt penceresi kapatıldı.",
     popupCancelled: "Google kayıt isteği iptal edildi.",
     googleConfigNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda Google ile giriş yönteminin etkinleştirildiğinden emin olun.",
+    firebaseNotConfigured: "Firebase yapılandırılmamış. Lütfen konsolu hatalar için kontrol edin.",
   }
 };
 
@@ -113,6 +115,11 @@ export default function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormInputs) => {
     setIsLoading(true);
+    if (!auth) {
+      toast({ title: t.errorTitle, description: t.firebaseNotConfigured, variant: 'destructive' });
+      setIsLoading(false);
+      return;
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       if (userCredential.user) {
@@ -145,6 +152,11 @@ export default function RegisterForm() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    if (!auth || !googleProvider) {
+      toast({ title: t.errorTitle, description: t.firebaseNotConfigured, variant: 'destructive' });
+      setIsGoogleLoading(false);
+      return;
+    }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await logLoginHistory(result.user.uid);

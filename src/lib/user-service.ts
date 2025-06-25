@@ -1,10 +1,11 @@
+
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 const MAX_LOGIN_HISTORY = 25;
 
 export async function logLoginHistory(userId: string) {
-  if (!userId) return;
+  if (!userId || !db) return; // Do not run if db is not initialized
 
   try {
     const historyCollectionRef = collection(db, 'users', userId, 'loginHistory');

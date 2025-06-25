@@ -18,20 +18,28 @@ const firebaseConfig = {
 
 // Firebase'i başlat
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-const db = getFirestore(app);
 
-// Analytics sadece client tarafında başlatılmalıdır
-let analytics: Analytics | undefined;
-if (typeof window !== 'undefined') {
-  try {
-    if (firebaseConfig.measurementId) {
-      analytics = getAnalytics(app);
-    }
-  } catch (error) {
-    console.warn("Firebase Analytics could not be initialized. This may be due to ad-blockers.");
+// Initialize services in a try-catch to prevent crash on invalid config
+let auth, googleProvider, db, analytics;
+
+try {
+  // getAuth() will throw an error if the API key is invalid.
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+  db = getFirestore(app);
+
+  if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+    analytics = getAnalytics(app);
   }
+} catch (error) {
+  console.error("FIREBASE INITIALIZATION FAILED:", error);
+  console.error("This is likely caused by missing or invalid Firebase credentials in your .env file.");
+  console.error("Please ensure all NEXT_PUBLIC_FIREBASE_* variables are set correctly.");
+  auth = null;
+  googleProvider = null;
+  db = null;
+  analytics = undefined;
 }
+
 
 export { app, auth, googleProvider, analytics, db };

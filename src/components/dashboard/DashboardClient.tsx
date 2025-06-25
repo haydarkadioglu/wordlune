@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Search, Filter, XCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, Filter, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
 import StatsDisplay from './StatsDisplay';
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export default function DashboardClient() {
   const { user } = useAuth();
@@ -30,6 +31,10 @@ export default function DashboardClient() {
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
 
   useEffect(() => {
+    if (!db) {
+        setLoadingWords(false);
+        return;
+    }
     if (user && user.uid) {
       setLoadingWords(true);
       const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
@@ -56,7 +61,7 @@ export default function DashboardClient() {
   }, [user, toast]);
 
   const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'createdAt'>, id?: string) => {
-    if (!user || !user.uid) {
+    if (!user || !user.uid || !db) {
       toast({ title: "Error", description: "You must be logged in to save words.", variant: "destructive" });
       return;
     }
@@ -81,7 +86,7 @@ export default function DashboardClient() {
   };
 
   const handleDeleteWord = async (id: string) => {
-    if (!user || !user.uid) {
+    if (!user || !user.uid || !db) {
         toast({ title: "Error", description: "You must be logged in to delete words.", variant: "destructive" });
         return;
     }
@@ -140,6 +145,18 @@ export default function DashboardClient() {
         );
     }
     return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
+  }
+
+  if (!db) {
+    return (
+        <Alert variant="destructive" className="max-w-2xl mx-auto">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Firebase Not Configured</AlertTitle>
+            <AlertDescription>
+                The connection to the database failed. This is likely due to missing or invalid Firebase credentials. Please check the console for more details and configure your .env file.
+            </AlertDescription>
+        </Alert>
+    )
   }
 
   return (
