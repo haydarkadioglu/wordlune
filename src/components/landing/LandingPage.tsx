@@ -170,13 +170,12 @@ export default function LandingPage() {
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-28 text-center bg-card">
-           <div className="absolute inset-0 opacity-5 pointer-events-none">
+           <div className="absolute inset-0 opacity-10 pointer-events-none">
                 <Image 
-                  src="https://placehold.co/1920x1080.png" 
+                  src="/auth-background.png" 
                   alt="Abstract background pattern" 
                   layout="fill" 
                   objectFit="cover"
-                  data-ai-hint="abstract geometric" 
                 />
               </div>
           <div className="container mx-auto px-4 relative">

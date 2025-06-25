@@ -1,12 +1,24 @@
 import type { Word, WordCategory } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookMarked, Smile, Meh, Frown } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
+
+const translations = {
+  en: {
+    totalWords: 'Total Words',
+  },
+  tr: {
+    totalWords: 'Toplam Kelime',
+  }
+}
 
 interface StatsDisplayProps {
   words: Word[];
 }
 
 export default function StatsDisplay({ words }: StatsDisplayProps) {
+  const { uiLanguage } = useSettings();
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   const totalWords = words.length;
   const wordsByCategory = words.reduce((acc, word) => {
     acc[word.category] = (acc[word.category] || 0) + 1;
@@ -14,7 +26,7 @@ export default function StatsDisplay({ words }: StatsDisplayProps) {
   }, {} as Record<WordCategory, number>);
 
   const stats = [
-    { title: 'Total Words', value: totalWords, icon: <BookMarked className="h-6 w-6 text-primary" />, color: "text-primary" },
+    { title: t.totalWords, value: totalWords, icon: <BookMarked className="h-6 w-6 text-primary" />, color: "text-primary" },
     { title: 'Very Good', value: wordsByCategory['Very Good'] || 0, icon: <Smile className="h-6 w-6 text-green-500" />, color: "text-green-500" },
     { title: 'Good', value: wordsByCategory['Good'] || 0, icon: <Meh className="h-6 w-6 text-sky-500" />, color: "text-sky-500" },
     { title: 'Bad', value: wordsByCategory['Bad'] || 0, icon: <Frown className="h-6 w-6 text-red-500" />, color: "text-red-500" },

@@ -2,18 +2,29 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Word } from '@/types';
-import { subDays, format, startOfWeek, isWithinInterval } from 'date-fns';
+import { subDays, format } from 'date-fns';
+import { tr } from 'date-fns/locale';
+import { useSettings } from '@/hooks/useSettings';
 
-interface WeeklyWordsChartProps {
-  words: Word[];
-}
+const translations = {
+  en: {
+    title: 'Weekly Word Additions',
+    description: 'Words added in the last 7 days.',
+    legend: 'Words Added',
+  },
+  tr: {
+    title: 'Haftalık Kelime Ekleme',
+    description: 'Son 7 günde eklenen kelimeler.',
+    legend: 'Eklenen Kelime',
+  }
+};
 
-const getWeeklyData = (words: Word[]) => {
+const getWeeklyData = (words: Word[], locale?: Locale) => {
   const data = [];
   const today = new Date();
   for (let i = 6; i >= 0; i--) {
     const day = subDays(today, i);
-    const dayStr = format(day, 'EEE'); // Mon, Tue, etc.
+    const dayStr = format(day, 'EEE', { locale }); // Mon, Tue or Pzt, Sal
     
     const wordsAddedOnDay = words.filter(word => {
       const wordDate = new Date(word.createdAt);
@@ -27,13 +38,16 @@ const getWeeklyData = (words: Word[]) => {
 
 
 export default function WeeklyWordsChart({ words }: WeeklyWordsChartProps) {
-  const chartData = getWeeklyData(words);
+  const { uiLanguage } = useSettings();
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+  const locale = uiLanguage === 'tr' ? tr : undefined;
+  const chartData = getWeeklyData(words, locale);
 
   return (
     <Card className="shadow-lg col-span-1 md:col-span-2 lg:col-span-4">
       <CardHeader>
-        <CardTitle className="font-headline text-xl text-primary">Weekly Word Additions</CardTitle>
-        <CardDescription>Words added in the last 7 days.</CardDescription>
+        <CardTitle className="font-headline text-xl text-primary">{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -51,7 +65,7 @@ export default function WeeklyWordsChart({ words }: WeeklyWordsChartProps) {
               itemStyle={{ color: 'hsl(var(--primary))' }}
             />
             <Legend wrapperStyle={{fontSize: "12px"}}/>
-            <Bar dataKey="wordsAdded" fill="hsl(var(--primary))" name="Words Added" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="wordsAdded" fill="hsl(var(--primary))" name={t.legend} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

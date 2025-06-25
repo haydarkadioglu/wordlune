@@ -21,10 +21,43 @@ import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useSettings } from '@/hooks/useSettings';
+
+const translations = {
+  en: {
+    loadingWords: 'Loading your words...',
+    firebaseNotConfigured: 'Firebase Not Configured',
+    firebaseNotConfiguredDesc: 'The connection to the database failed. This is likely due to missing or invalid Firebase credentials. Please check the console for more details and configure your .env file.',
+    yourWords: 'Your Words',
+    yourWordsDesc: 'View, search, and manage your saved words.',
+    addNewWord: 'Add New Word',
+    searchPlaceholder: 'Search words, meanings, or examples...',
+    filterByCategory: 'Filter by category',
+    allCategories: 'All Categories',
+    cardsView: 'Cards',
+    tableView: 'Table',
+  },
+  tr: {
+    loadingWords: 'Kelimeleriniz yükleniyor...',
+    firebaseNotConfigured: 'Firebase Yapılandırılmamış',
+    firebaseNotConfiguredDesc: 'Veritabanı bağlantısı başarısız oldu. Bu durum, büyük olasılıkla eksik veya geçersiz Firebase kimlik bilgilerinden kaynaklanmaktadır. Lütfen daha fazla ayrıntı için konsolu kontrol edin ve .env dosyanızı yapılandırın.',
+    yourWords: 'Kelimeleriniz',
+    yourWordsDesc: 'Kaydedilen kelimelerinizi görüntüleyin, arayın ve yönetin.',
+    addNewWord: 'Yeni Kelime Ekle',
+    searchPlaceholder: 'Kelime, anlam veya örnek arayın...',
+    filterByCategory: 'Kategoriye göre filtrele',
+    allCategories: 'Tüm Kategoriler',
+    cardsView: 'Kartlar',
+    tableView: 'Tablo',
+  }
+};
 
 export default function DashboardClient() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { uiLanguage } = useSettings();
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+
   const [words, setWords] = useState<Word[]>([]);
   const [loadingWords, setLoadingWords] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -172,7 +205,7 @@ export default function DashboardClient() {
         return (
              <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="ml-4 text-muted-foreground">Loading your words...</p>
+                <p className="ml-4 text-muted-foreground">{t.loadingWords}</p>
             </div>
         );
     }
@@ -186,9 +219,9 @@ export default function DashboardClient() {
     return (
         <Alert variant="destructive" className="max-w-2xl mx-auto">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Firebase Not Configured</AlertTitle>
+            <AlertTitle>{t.firebaseNotConfigured}</AlertTitle>
             <AlertDescription>
-                The connection to the database failed. This is likely due to missing or invalid Firebase credentials. Please check the console for more details and configure your .env file.
+                {t.firebaseNotConfiguredDesc}
             </AlertDescription>
         </Alert>
     )
@@ -207,11 +240,11 @@ export default function DashboardClient() {
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <CardTitle className="font-headline text-2xl text-primary">Your Words</CardTitle>
-                    <CardDescription>View, search, and manage your saved words.</CardDescription>
+                    <CardTitle className="font-headline text-2xl text-primary">{t.yourWords}</CardTitle>
+                    <CardDescription>{t.yourWordsDesc}</CardDescription>
                 </div>
                 <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto" disabled={!user}>
-                    <PlusCircle className="mr-2 h-5 w-5" /> Add New Word
+                    <PlusCircle className="mr-2 h-5 w-5" /> {t.addNewWord}
                 </Button>
             </div>
         </CardHeader>
@@ -222,7 +255,7 @@ export default function DashboardClient() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search words, meanings, or examples..."
+                            placeholder={t.searchPlaceholder}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
@@ -238,10 +271,10 @@ export default function DashboardClient() {
                                 disabled={!user || loadingWords}
                             >
                                 <SelectTrigger className="pl-10">
-                                    <SelectValue placeholder="Filter by category" />
+                                    <SelectValue placeholder={t.filterByCategory} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="All">All Categories</SelectItem>
+                                    <SelectItem value="All">{t.allCategories}</SelectItem>
                                     <SelectItem value="Very Good">Very Good</SelectItem>
                                     <SelectItem value="Good">Good</SelectItem>
                                     <SelectItem value="Bad">Bad</SelectItem>
@@ -255,8 +288,8 @@ export default function DashboardClient() {
                         )}
                     </div>
                     <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                        <TabsTrigger value="card-view"><LayoutGrid className="mr-2 h-4 w-4" />Cards</TabsTrigger>
-                        <TabsTrigger value="table-view"><List className="mr-2 h-4 w-4" />Table</TabsTrigger>
+                        <TabsTrigger value="card-view"><LayoutGrid className="mr-2 h-4 w-4" />{t.cardsView}</TabsTrigger>
+                        <TabsTrigger value="table-view"><List className="mr-2 h-4 w-4" />{t.tableView}</TabsTrigger>
                     </TabsList>
                 </div>
 

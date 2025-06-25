@@ -1,10 +1,24 @@
 
 import type { Word } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CategoryLabel from './CategoryLabel';
 import { Button } from '@/components/ui/button';
 import { SpeakerIcon, Trash2, Edit3, Type } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
+
+const translations = {
+  en: {
+    editWord: 'Edit word',
+    deleteWord: 'Delete word',
+    usageExample: 'Usage Example',
+  },
+  tr: {
+    editWord: 'Kelimeyi düzenle',
+    deleteWord: 'Kelimeyi sil',
+    usageExample: 'Kullanım Örneği',
+  }
+}
 
 interface WordListItemProps {
   word: Word;
@@ -13,6 +27,8 @@ interface WordListItemProps {
 }
 
 export default function WordListItem({ word, onDelete, onEdit }: WordListItemProps) {
+  const { uiLanguage } = useSettings();
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="pb-3">
@@ -24,10 +40,10 @@ export default function WordListItem({ word, onDelete, onEdit }: WordListItemPro
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => onEdit(word)} aria-label="Edit word" className="text-muted-foreground hover:text-accent">
+            <Button variant="ghost" size="icon" onClick={() => onEdit(word)} aria-label={t.editWord} className="text-muted-foreground hover:text-accent">
               <Edit3 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(word.id)} aria-label="Delete word" className="text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="icon" onClick={() => onDelete(word.id)} aria-label={t.deleteWord} className="text-muted-foreground hover:text-destructive">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -49,7 +65,7 @@ export default function WordListItem({ word, onDelete, onEdit }: WordListItemPro
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="item-1" className="border-b-0">
             <AccordionTrigger className="text-sm font-semibold hover:no-underline py-2 text-foreground/80">
-              Usage Example
+              {t.usageExample}
             </AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground pt-1 pb-2">
               {word.exampleSentence}

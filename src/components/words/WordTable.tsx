@@ -18,6 +18,23 @@ import {
 import { Badge } from '../ui/badge';
 import { useSettings } from '@/hooks/useSettings';
 
+const translations = {
+  en: {
+    wordsBadge: (count: number) => `${count} words`,
+    wordHeader: 'Word',
+    exampleHeader: 'Example Sentence',
+    meaningHeader: (lang: string) => `Meaning (${lang})`,
+    noWords: 'No words to display in the table. Add some words first!',
+  },
+  tr: {
+    wordsBadge: (count: number) => `${count} kelime`,
+    wordHeader: 'Kelime',
+    exampleHeader: 'Örnek Cümle',
+    meaningHeader: (lang: string) => `Anlamı (${lang})`,
+    noWords: 'Tabloda gösterilecek kelime yok. Önce birkaç kelime ekleyin!',
+  }
+}
+
 interface WordTableProps {
   words: Word[];
 }
@@ -25,7 +42,8 @@ interface WordTableProps {
 const categoryOrder: WordCategory[] = ['Very Good', 'Good', 'Bad'];
 
 export default function WordTable({ words }: WordTableProps) {
-  const { targetLanguage } = useSettings();
+  const { targetLanguage, uiLanguage } = useSettings();
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const groupedWords = useMemo(() => {
     const groups: Partial<Record<WordCategory, Word[]>> = {};
@@ -45,7 +63,7 @@ export default function WordTable({ words }: WordTableProps) {
   const orderedCategories = categoryOrder.filter(cat => groupedWords[cat] && groupedWords[cat]!.length > 0);
 
   if (words.length === 0) {
-    return <p className="text-center text-muted-foreground mt-8">No words to display in the table. Add some words first!</p>;
+    return <p className="text-center text-muted-foreground mt-8">{t.noWords}</p>;
   }
 
   return (
@@ -55,7 +73,7 @@ export default function WordTable({ words }: WordTableProps) {
           <AccordionTrigger className="text-lg font-semibold hover:no-underline py-4">
             <div className="flex items-center gap-4">
               <span>{category}</span>
-              <Badge variant="secondary">{groupedWords[category]?.length} words</Badge>
+              <Badge variant="secondary">{t.wordsBadge(groupedWords[category]?.length || 0)}</Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -63,9 +81,9 @@ export default function WordTable({ words }: WordTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[15%]">Word</TableHead>
-                    <TableHead className="w-[60%]">Example Sentence</TableHead>
-                    <TableHead className="w-[25%]">Meaning ({targetLanguage})</TableHead>
+                    <TableHead className="w-[15%]">{t.wordHeader}</TableHead>
+                    <TableHead className="w-[60%]">{t.exampleHeader}</TableHead>
+                    <TableHead className="w-[25%]">{t.meaningHeader(targetLanguage)}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

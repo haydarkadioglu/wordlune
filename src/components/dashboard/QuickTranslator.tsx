@@ -13,11 +13,47 @@ import { translateWord } from '@/ai/flows/translate-word-flow';
 import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const translateSchema = z.object({
-  word: z.string().min(1, 'Please enter a word to translate.'),
-});
+const translations = {
+    en: {
+        title: 'Quick Translator',
+        description: 'Translate a word and add it to your list.',
+        from: 'From',
+        to: 'To',
+        swapLanguages: 'Swap languages',
+        placeholder: (lang: string) => `Translate a word from ${lang}...`,
+        translateButton: 'Translate',
+        noTranslations: 'No Translations Found',
+        noTranslationsDesc: (word: string) => `Could not find any translations for "${word}".`,
+        translationFailed: 'Translation Failed',
+        translationsFor: (word: string, lang: string) => `Translations for "${word}" in ${lang}`,
+        addWordAria: (meaning: string) => `Add ${meaning} to words`,
+        enterWord: 'Please enter a word to translate.',
+    },
+    tr: {
+        title: 'Hızlı Çevirmen',
+        description: 'Bir kelimeyi çevirin ve listenize ekleyin.',
+        from: 'Kaynak Dil',
+        to: 'Hedef Dil',
+        swapLanguages: 'Dilleri değiştir',
+        placeholder: (lang: string) => `${lang} dilinden bir kelime çevir...`,
+        translateButton: 'Çevir',
+        noTranslations: 'Çeviri Bulunamadı',
+        noTranslationsDesc: (word: string) => `"${word}" için çeviri bulunamadı.`,
+        translationFailed: 'Çeviri Başarısız',
+        translationsFor: (word: string, lang: string) => `"${word}" için ${lang} dilindeki çeviriler`,
+        addWordAria: (meaning: string) => `${meaning} kelimesini listeye ekle`,
+        enterWord: 'Lütfen çevirmek için bir kelime girin.',
+    }
+};
 
-type TranslateFormData = z.infer<typeof translateSchema>;
+const getTranslateSchema = (lang: 'en' | 'tr') => {
+    const t = translations[lang];
+    return z.object({
+        word: z.string().min(1, t.enterWord),
+    });
+};
+
+type TranslateFormData = z.infer<ReturnType<typeof getTranslateSchema>>;
 
 interface QuickTranslatorProps {
     onAddWord: (word: string, meaning: string) => void;
@@ -25,26 +61,27 @@ interface QuickTranslatorProps {
 
 export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [translations, setTranslations] = useState<string[]>([]);
+  const [translationsResult, setTranslationsResult] = useState<string[]>([]);
   const { toast } = useToast();
   const settings = useSettings();
+  const { uiLanguage } = settings;
+  const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const [localSourceLanguage, setLocalSourceLanguage] = useState(settings.sourceLanguage);
   const [localTargetLanguage, setLocalTargetLanguage] = useState(settings.targetLanguage);
 
   useEffect(() => {
-    // Sync with global settings if they change
     setLocalSourceLanguage(settings.sourceLanguage);
     setLocalTargetLanguage(settings.targetLanguage);
   }, [settings.sourceLanguage, settings.targetLanguage]);
   
   const { register, handleSubmit, formState: { errors }, getValues } = useForm<TranslateFormData>({
-    resolver: zodResolver(translateSchema),
+    resolver: zodResolver(getTranslateSchema(uiLanguage as 'en' | 'tr')),
   });
 
   const handleTranslate = async (data: TranslateFormData) => {
     setIsLoading(true);
-    setTranslations([]);
+    setTranslationsResult([]);
     try {
       const result = await translateWord({ 
         word: data.word, 
@@ -52,18 +89,18 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
         targetLanguage: localTargetLanguage 
       });
       if (result.translations && result.translations.length > 0) {
-        setTranslations(result.translations);
+        setTranslationsResult(result.translations);
       } else {
         toast({
-          title: 'No Translations Found',
-          description: `Could not find any translations for "${data.word}".`,
+          title: t.noTranslations,
+          description: t.noTranslationsDesc(data.word),
           variant: 'destructive',
         });
       }
     } catch (error) {
       console.error("Translation error:", error);
       toast({
-        title: 'Translation Failed',
+        title: t.translationFailed,
         description: error instanceof Error ? error.message : "An unknown error occurred.",
         variant: 'destructive',
       });
@@ -84,8 +121,8 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
         <div className="flex items-center space-x-3">
           <Languages className="h-8 w-8 text-primary" />
           <div>
-            <CardTitle className="font-headline text-2xl text-primary">Quick Translator</CardTitle>
-            <CardDescription>Translate a word and add it to your list.</CardDescription>
+            <CardTitle className="font-headline text-2xl text-primary">{t.title}</CardTitle>
+            <CardDescription>{t.description}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -94,7 +131,7 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
           <div className="w-full sm:flex-1">
              <Select value={localSourceLanguage} onValueChange={setLocalSourceLanguage}>
                 <SelectTrigger>
-                  <SelectValue placeholder="From" />
+                  <SelectValue placeholder={t.from} />
                 </SelectTrigger>
                 <SelectContent>
                   {SUPPORTED_LANGUAGES.map(lang => (
@@ -104,14 +141,14 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
               </Select>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={handleSwapLanguages} className="text-primary hover:text-accent flex-shrink-0" aria-label="Swap languages">
+          <Button variant="ghost" size="icon" onClick={handleSwapLanguages} className="text-primary hover:text-accent flex-shrink-0" aria-label={t.swapLanguages}>
             <ArrowRightLeft className="h-5 w-5" />
           </Button>
 
           <div className="w-full sm:flex-1">
              <Select value={localTargetLanguage} onValueChange={setLocalTargetLanguage}>
               <SelectTrigger>
-                <SelectValue placeholder="To" />
+                <SelectValue placeholder={t.to} />
               </SelectTrigger>
               <SelectContent>
                 {SUPPORTED_LANGUAGES.map(lang => (
@@ -126,22 +163,22 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
           <div className="flex-grow">
             <Input 
               {...register('word')} 
-              placeholder={`Translate a word from ${localSourceLanguage}...`} 
+              placeholder={t.placeholder(localSourceLanguage)}
               className="text-base"
             />
             {errors.word && <p className="text-sm text-destructive mt-1">{errors.word.message}</p>}
           </div>
           <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            Translate
+            {t.translateButton}
           </Button>
         </form>
 
-        {translations.length > 0 && (
+        {translationsResult.length > 0 && (
           <div className="mt-6">
-            <h4 className="font-semibold text-lg text-foreground mb-3">Translations for "{getValues('word')}" in {localTargetLanguage}</h4>
+            <h4 className="font-semibold text-lg text-foreground mb-3">{t.translationsFor(getValues('word'), localTargetLanguage)}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {translations.map((meaning, index) => (
+              {translationsResult.map((meaning, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <span className="text-foreground font-medium">{meaning}</span>
                   <Button 
@@ -149,7 +186,7 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
                     variant="ghost" 
                     className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={() => onAddWord(getValues('word'), meaning)}
-                    aria-label={`Add ${meaning} to words`}
+                    aria-label={t.addWordAria(meaning)}
                     >
                     <PlusCircle className="h-5 w-5" />
                   </Button>
