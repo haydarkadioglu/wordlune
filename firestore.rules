@@ -3,11 +3,40 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write to their own documents.
-    // This rule applies to all subcollections like 'words', 'lists', 
-    // and the words within those lists.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
+  
+    // Kullanıcılar koleksiyonunu ve altındaki dokümanları eşleştir
+    match /users/{userId} {
+      // Bir kullanıcının kendi dokümanını (ileride profil bilgileri eklerseniz diye)
+      // okumasına ve güncellemesine izin ver.
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+
+      // Kullanıcının kendi 'words' alt koleksiyonunu eşleştir
+      match /words/{wordId} {
+        // Oturumu açık bir kullanıcının kendi 'words' alt koleksiyonundaki
+        // dokümanları okumasına, yazmasına, güncellemesine ve silmesine izin ver.
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Kullanıcının kendi 'loginHistory' alt koleksiyonunu eşleştir
+      match /loginHistory/{historyId} {
+        // Kullanıcının kendi giriş geçmişini oluşturmasına ve okumasına izin ver.
+        allow create, read, delete: if request.auth != null && request.auth.uid == userId;
+
+        // Geçmiş giriş kayıtlarının güncellenmesine asla izin verme.
+        allow update: if false;
+      }
+      
+      // Kullanıcının kendi 'lists' alt koleksiyonunu ve içindeki kelimeleri yönetmesine izin ver
+      match /lists/{listId} {
+        // Liste belgesinin (adı, kelime sayısı) okunmasına, oluşturulmasına, güncellenmesine ve silinmesine izin ver
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Liste içindeki 'words' alt koleksiyonunu eşleştir
+        match /words/{wordId} {
+            // Liste içindeki kelimeleri okumasına, yazmasına, güncellemesine ve silmesine izin ver
+            allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
     }
   }
 }
