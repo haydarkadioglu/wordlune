@@ -20,3 +20,21 @@ export interface ProcessedWord {
   exampleSentence: string;
   meaning: string;
 }
+
+// --- New Types for Custom Lists Feature ---
+
+export interface UserList {
+  id: string;
+  name: string;
+  createdAt: number; // timestamp
+  wordCount: number;
+}
+
+export interface ListWord {
+  id: string;
+  word: string;
+  meaning: string;
+  example: string;
+  language: string;
+  createdAt: number; // timestamp
+}

@@ -8,6 +8,7 @@ import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function Header() {
   const { user, signOut } = useAuth();
@@ -44,16 +45,18 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-card shadow-md sticky top-0 z-50">
+    <header className="bg-card shadow-md sticky top-0 z-40 border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <Logo size="sm" />
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-4">
+          <SidebarTrigger className="md:hidden" />
           {user && (
             <p className="text-sm text-foreground hidden sm:block">
               Welcome, <span className="font-semibold text-primary">{user.displayName || user.email}</span>
             </p>
           )}
+        </div>
 
+        <div className="flex items-center space-x-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Change language">
