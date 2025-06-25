@@ -8,10 +8,10 @@ export default function LoginPage() {
        <div className="absolute inset-0 opacity-10 pointer-events-none">
         <Image 
           src="https://placehold.co/1920x1080.png" 
-          alt="Abstract background" 
+          alt="Abstract background of letters" 
           layout="fill" 
           objectFit="cover"
-          data-ai-hint="abstract texture" 
+          data-ai-hint="letter pattern" 
         />
       </div>
       <div className="relative z-10 flex flex-col items-center w-full">
