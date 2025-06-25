@@ -2,3 +2,4 @@
 import './flows/generate-example-sentence-flow';
 import './flows/generate-phonetic-pronunciation-flow';
 import './flows/translate-word-flow';
+import './flows/bulk-generate-word-details-flow';

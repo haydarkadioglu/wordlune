@@ -1,21 +1,24 @@
 
 "use client";
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import type { Word, WordCategory } from '@/types';
+import type { Word, WordCategory, ProcessedWord } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Search, Filter, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlusCircle, Search, Filter, XCircle, Loader2, AlertTriangle, LayoutGrid, List } from 'lucide-react';
 import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
+import WordTable from '@/components/words/WordTable';
 import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
 import QuickTranslator from './QuickTranslator';
+import BulkAddWords from './BulkAddWords';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
@@ -85,6 +88,34 @@ export default function DashboardClient() {
     }
   };
 
+  const handleBulkSaveWords = async (processedWords: Omit<ProcessedWord, 'id' | 'createdAt' | 'category'>[]) => {
+    if (!user || !user.uid || !db) {
+      toast({ title: "Error", description: "You must be logged in to save words.", variant: "destructive" });
+      return;
+    }
+
+    const batch = writeBatch(db);
+    const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
+
+    processedWords.forEach(word => {
+        const newWordRef = doc(wordsCollectionRef); // Create a new doc with a unique ID
+        const wordToSave: Omit<Word, 'id'> = {
+            ...word,
+            category: 'Good', // Default category for bulk added words
+            createdAt: Date.now(),
+            pronunciationText: '', // This can be added later if needed
+        };
+        batch.set(newWordRef, wordToSave);
+    });
+
+    try {
+        await batch.commit();
+    } catch (error: any) {
+        console.error("Error bulk saving words: ", error);
+        toast({ title: "Error saving words", description: error.message, variant: "destructive" });
+    }
+  };
+
   const handleDeleteWord = async (id: string) => {
     if (!user || !user.uid || !db) {
         toast({ title: "Error", description: "You must be logged in to delete words.", variant: "destructive" });
@@ -124,6 +155,7 @@ export default function DashboardClient() {
   const filteredWords = useMemo(() => {
     return words.filter(word => {
       const matchesSearchTerm = word.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                (word.meaning && word.meaning.toLowerCase().includes(searchTerm.toLowerCase())) ||
                                 (word.exampleSentence && word.exampleSentence.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = categoryFilter === 'All' || word.category === categoryFilter;
       return matchesSearchTerm && matchesCategory;
@@ -135,7 +167,7 @@ export default function DashboardClient() {
     setCategoryFilter('All');
   };
   
-  const renderWordList = () => {
+  const renderWordContent = (view: 'list' | 'table') => {
      if (loadingWords) { 
         return (
              <div className="flex justify-center items-center h-64">
@@ -144,7 +176,10 @@ export default function DashboardClient() {
             </div>
         );
     }
-    return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
+    if (view === 'list') {
+      return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
+    }
+    return <WordTable words={filteredWords} />;
   }
 
   if (!db) {
@@ -163,58 +198,78 @@ export default function DashboardClient() {
     <div className="space-y-8">
       <StatsDisplay words={words} />
       
-      <QuickTranslator onAddWord={handleAddFromTranslator} />
-      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <QuickTranslator onAddWord={handleAddFromTranslator} />
+        <BulkAddWords onBulkSave={handleBulkSaveWords} />
+      </div>
+
       <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="font-headline text-2xl text-primary">Your Words</CardTitle>
-            <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto" disabled={!user}>
-              <PlusCircle className="mr-2 h-5 w-5" /> Add New Word
-            </Button>
-          </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <CardTitle className="font-headline text-2xl text-primary">Your Words</CardTitle>
+                    <CardDescription>View, search, and manage your saved words.</CardDescription>
+                </div>
+                <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto" disabled={!user}>
+                    <PlusCircle className="mr-2 h-5 w-5" /> Add New Word
+                </Button>
+            </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border rounded-lg bg-card-foreground/5">
-            <div className="flex-grow relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search words or examples..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                disabled={!user || loadingWords}
-              />
-            </div>
-            <div className="flex-grow sm:flex-grow-0 sm:w-48 relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                <Select
-                    value={categoryFilter}
-                    onValueChange={(value) => setCategoryFilter(value as WordCategory | 'All')}
-                    disabled={!user || loadingWords}
-                >
-                    <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Filter by category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="All">All Categories</SelectItem>
-                    <SelectItem value="Very Good">Very Good</SelectItem>
-                    <SelectItem value="Good">Good</SelectItem>
-                    <SelectItem value="Bad">Bad</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            {(searchTerm || categoryFilter !== 'All') && (
-                <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary" disabled={!user || loadingWords}>
-                    <XCircle className="mr-2 h-4 w-4" /> Clear
-                </Button>
-            )}
-          </div>
-          {renderWordList()}
+            <Tabs defaultValue="card-view" className="w-full">
+                <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border rounded-lg bg-card-foreground/5 items-center">
+                    <div className="flex-grow relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Search words, meanings, or examples..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                            disabled={!user || loadingWords}
+                        />
+                    </div>
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="flex-grow sm:flex-grow-0 sm:w-48 relative">
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                            <Select
+                                value={categoryFilter}
+                                onValueChange={(value) => setCategoryFilter(value as WordCategory | 'All')}
+                                disabled={!user || loadingWords}
+                            >
+                                <SelectTrigger className="pl-10">
+                                    <SelectValue placeholder="Filter by category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="All">All Categories</SelectItem>
+                                    <SelectItem value="Very Good">Very Good</SelectItem>
+                                    <SelectItem value="Good">Good</SelectItem>
+                                    <SelectItem value="Bad">Bad</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {(searchTerm || categoryFilter !== 'All') && (
+                            <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary p-2" disabled={!user || loadingWords}>
+                                <XCircle className="h-5 w-5" />
+                            </Button>
+                        )}
+                    </div>
+                    <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+                        <TabsTrigger value="card-view"><LayoutGrid className="mr-2 h-4 w-4" />Cards</TabsTrigger>
+                        <TabsTrigger value="table-view"><List className="mr-2 h-4 w-4" />Table</TabsTrigger>
+                    </TabsList>
+                </div>
+
+                <TabsContent value="card-view">
+                  {renderWordContent('list')}
+                </TabsContent>
+                <TabsContent value="table-view">
+                  {renderWordContent('table')}
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
-
+      
       <WeeklyWordsChart words={words} />
 
       <AddWordDialog

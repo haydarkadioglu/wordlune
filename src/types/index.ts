@@ -13,3 +13,10 @@ export interface Word {
   meaning?: string;
   createdAt: number; // timestamp
 }
+
+// Type for words processed by the bulk AI flow before they get a category and ID
+export interface ProcessedWord {
+  text: string;
+  exampleSentence: string;
+  meaning: string;
+}
