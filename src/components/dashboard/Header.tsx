@@ -2,13 +2,29 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
+
+const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const isActive = pathname === href;
+  return (
+    <Link href={href} passHref>
+      <Button variant="ghost" className={cn(
+        "text-muted-foreground hover:text-primary",
+        isActive && "text-primary bg-primary/10"
+      )}>
+        {children}
+      </Button>
+    </Link>
+  );
+};
 
 export default function Header() {
   const { user, signOut } = useAuth();
@@ -48,15 +64,19 @@ export default function Header() {
     <header className="bg-card shadow-md sticky top-0 z-40 border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger className="md:hidden" />
-          {user && (
-            <p className="text-sm text-foreground hidden sm:block">
-              Welcome, <span className="font-semibold text-primary">{user.displayName || user.email}</span>
-            </p>
-          )}
+          <Logo />
+          <nav className="hidden md:flex items-center gap-2">
+            <NavLink href="/dashboard">Dashboard</NavLink>
+            <NavLink href="/dashboard/lists">My Lists</NavLink>
+          </nav>
         </div>
 
         <div className="flex items-center space-x-2">
+           {user && (
+            <p className="text-sm text-foreground hidden lg:block mr-4">
+              Welcome, <span className="font-semibold text-primary">{user.displayName || user.email}</span>
+            </p>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Change language">
