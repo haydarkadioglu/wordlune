@@ -32,7 +32,13 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     db = getFirestore(app);
 
     if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
-      analytics = getAnalytics(app);
+      // Check if analytics is supported by the browser
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        console.warn("Firebase Analytics is not supported in this environment.");
+        analytics = undefined;
+      }
     }
   } catch (error) {
     console.error("FIREBASE INITIALIZATION FAILED:", error);
