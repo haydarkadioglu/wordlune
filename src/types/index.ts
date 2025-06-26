@@ -1,6 +1,8 @@
 import type { User as FirebaseUser } from "firebase/auth";
 
-export interface User extends FirebaseUser {}
+export type AppUser = FirebaseUser & {
+  username: string;
+};
 
 export type WordCategory = 'Bad' | 'Good' | 'Very Good';
 

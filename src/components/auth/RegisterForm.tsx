@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
-import { logLoginHistory } from '@/lib/user-service';
+import { logLoginHistory, checkUsernameExists, createInitialUserDocuments } from '@/lib/user-service';
 
 
 const translations = {
@@ -24,6 +24,8 @@ const translations = {
     description: "Create a new account and start learning words!",
     nameLabel: "Your Name",
     namePlaceholder: "Your Name",
+    usernameLabel: "Username",
+    usernamePlaceholder: "e.g., wordmaster",
     emailLabel: "Email",
     emailPlaceholder: "example@email.com",
     passwordLabel: "Password",
@@ -35,11 +37,15 @@ const translations = {
     accountCreated: "Your account has been created. Logging you in...",
     errorTitle: "Error",
     registrationFailed: "Registration failed. Please check your information.",
+    usernameTaken: "This username is already taken. Please choose another one.",
     emailInUse: "This email address is already in use.",
     invalidEmail: "Invalid email format.",
     weakPassword: "Password is too weak. Try a stronger one.",
-    configNotFound: "Firebase authentication configuration not found. Please ensure the Email/Password sign-in method is enabled in your Firebase console.",
+    configNotFound: "Firebase authentication configuration not found.",
     nameMinLengthZod: "Name must be at least 2 characters.",
+    usernameMinLengthZod: "Username must be at least 3 characters.",
+    usernameMaxLengthZod: "Username must not exceed 20 characters.",
+    usernameRegexZod: "Username can only contain lowercase letters, numbers, and underscores (_).",
     invalidEmailZod: "Please enter a valid email address.",
     passwordMinLengthZod: "Password must be at least 6 characters.",
     passwordsDontMatchZod: "Passwords do not match.",
@@ -48,7 +54,7 @@ const translations = {
     googleSignInError: "Could not sign up with Google. Please try again.",
     popupClosed: "Google sign-up window was closed.",
     popupCancelled: "Google sign-up request was cancelled.",
-    googleConfigNotFound: "Firebase authentication configuration not found. Please ensure the Google sign-in method is enabled in your Firebase console.",
+    googleConfigNotFound: "Firebase authentication configuration not found.",
     firebaseNotConfigured: "Firebase is not configured. Please check the console for errors.",
   },
   tr: {
@@ -56,6 +62,8 @@ const translations = {
     description: "Yeni bir hesap oluşturun ve kelime öğrenmeye başlayın!",
     nameLabel: "Adınız",
     namePlaceholder: "Adınız Soyadınız",
+    usernameLabel: "Kullanıcı Adı",
+    usernamePlaceholder: "örn: kelimeustasi",
     emailLabel: "E-posta",
     emailPlaceholder: "ornek@eposta.com",
     passwordLabel: "Şifre",
@@ -67,11 +75,15 @@ const translations = {
     accountCreated: "Hesabınız oluşturuldu. Giriş yapılıyor...",
     errorTitle: "Hata",
     registrationFailed: "Kayıt başarısız. Lütfen bilgilerinizi kontrol edin.",
+    usernameTaken: "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.",
     emailInUse: "Bu e-posta adresi zaten kullanımda.",
     invalidEmail: "Geçersiz e-posta formatı.",
     weakPassword: "Şifre çok zayıf. Daha güçlü bir şifre deneyin.",
-    configNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda E-posta/Şifre ile giriş yönteminin etkinleştirildiğinden emin olun.",
+    configNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı.",
     nameMinLengthZod: "İsim en az 2 karakter olmalıdır.",
+    usernameMinLengthZod: "Kullanıcı adı en az 3 karakter olmalıdır.",
+    usernameMaxLengthZod: "Kullanıcı adı 20 karakteri geçmemelidir.",
+    usernameRegexZod: "Kullanıcı adı yalnızca küçük harf, rakam ve alt çizgi (_) içerebilir.",
     invalidEmailZod: "Geçerli bir e-posta adresi girin.",
     passwordMinLengthZod: "Şifre en az 6 karakter olmalıdır.",
     passwordsDontMatchZod: "Şifreler eşleşmiyor.",
@@ -80,7 +92,7 @@ const translations = {
     googleSignInError: "Google ile kayıt olunamadı. Lütfen tekrar deneyin.",
     popupClosed: "Google kayıt penceresi kapatıldı.",
     popupCancelled: "Google kayıt isteği iptal edildi.",
-    googleConfigNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda Google ile giriş yönteminin etkinleştirildiğinden emin olun.",
+    googleConfigNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı.",
     firebaseNotConfigured: "Firebase yapılandırılmamış. Lütfen konsolu hatalar için kontrol edin.",
   }
 };
@@ -89,6 +101,11 @@ const getRegisterSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
     displayName: z.string().min(2, t.nameMinLengthZod),
+    username: z.string()
+      .min(3, t.usernameMinLengthZod)
+      .max(20, t.usernameMaxLengthZod)
+      .regex(/^[a-z0-9_]+$/, t.usernameRegexZod)
+      .transform(val => val.trim().toLowerCase()),
     email: z.string().email(t.invalidEmailZod),
     password: z.string().min(6, t.passwordMinLengthZod),
     confirmPassword: z.string().min(6, t.passwordMinLengthZod),
@@ -120,16 +137,24 @@ export default function RegisterForm() {
       setIsLoading(false);
       return;
     }
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, {
-          displayName: data.displayName,
-        });
+      const usernameExists = await checkUsernameExists(data.username);
+      if (usernameExists) {
+        toast({ title: t.errorTitle, description: t.usernameTaken, variant: 'destructive' });
+        setIsLoading(false);
+        return;
       }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      
+      await updateProfile(userCredential.user, { displayName: data.displayName });
+      await createInitialUserDocuments(userCredential.user.uid, data.username, data.displayName, data.email);
       await logLoginHistory(userCredential.user.uid);
+      
       toast({ title: t.successTitle, description: t.accountCreated });
       router.push('/dashboard');
+
     } catch (error: any) {
       console.error("Registration error:", error);
       const errorCode = error.code;
@@ -142,7 +167,6 @@ export default function RegisterForm() {
         errorMessage = t.weakPassword;
       } else if (errorCode === 'auth/configuration-not-found') {
         errorMessage = t.configNotFound;
-        console.error("Firebase auth/configuration-not-found: Ensure Email/Password sign-in is enabled in your Firebase project console.");
       }
       toast({ title: t.errorTitle, description: errorMessage, variant: 'destructive' });
     } finally {
@@ -152,31 +176,13 @@ export default function RegisterForm() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    if (!auth || !googleProvider) {
-      toast({ title: t.errorTitle, description: t.firebaseNotConfigured, variant: 'destructive' });
-      setIsGoogleLoading(false);
-      return;
-    }
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await logLoginHistory(result.user.uid);
-      toast({ title: t.successTitle, description: t.accountCreated });
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error("Google Sign-In error:", error);
-      let errorMessage = t.googleSignInError;
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = t.popupClosed;
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = t.popupCancelled;
-      } else if (error.code === 'auth/configuration-not-found') {
-         errorMessage = t.googleConfigNotFound;
-         console.error("Firebase auth/configuration-not-found: Ensure Google sign-in is enabled in your Firebase project console.");
-      }
-      toast({ title: t.errorTitle, description: errorMessage, variant: 'destructive' });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    toast({
+        title: "Google Sign-In",
+        description: "Google sign-in does not support unique usernames in this version. Please use email/password registration to choose a username.",
+        variant: 'destructive'
+    });
+    setIsGoogleLoading(false);
+    // The rest of the Google sign-in logic is disabled for now to enforce username creation.
   };
 
   return (
@@ -193,6 +199,11 @@ export default function RegisterForm() {
           <Label htmlFor="displayName">{t.nameLabel}</Label>
           <Input id="displayName" type="text" {...register('displayName')} placeholder={t.namePlaceholder} className="mt-1" />
           {errors.displayName && <p className="mt-1 text-sm text-destructive">{errors.displayName.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="username">{t.usernameLabel}</Label>
+          <Input id="username" type="text" {...register('username')} placeholder={t.usernamePlaceholder} className="mt-1" />
+          {errors.username && <p className="mt-1 text-sm text-destructive">{errors.username.message}</p>}
         </div>
         <div>
           <Label htmlFor="email">{t.emailLabel}</Label>

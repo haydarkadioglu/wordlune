@@ -1,12 +1,13 @@
 
 "use client";
 import type React from 'react';
-import { useState, createContext, ReactNode, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import type { User } from '@/types';
-import * as NextRouter from 'next/navigation'; // Alias to avoid conflict with local router
+import { useState, createContext, ReactNode, useEffect, useMemo, useCallback } from 'react';
+import { onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import type { AppUser } from '@/types';
+import * as NextRouter from 'next/navigation';
 import { SettingsContext } from '@/hooks/useSettings';
+import { doc, getDoc } from 'firebase/firestore';
 
 
 // --- Settings Provider ---
@@ -57,7 +58,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   }), [sourceLanguage, targetLanguage, uiLanguage]);
 
   if (!isLoaded) {
-    return null; // Or a loading spinner, but null avoids hydration issues
+    return null; 
   }
 
   return (
@@ -70,9 +71,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
 // --- Auth Provider ---
 export interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refetchUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,37 +84,52 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start as true
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = NextRouter.useRouter();
   const pathname = NextRouter.usePathname();
 
-  useEffect(() => {
-    if (!auth) {
-      setLoading(false);
-      return; // Firebase not initialized
+  const fetchUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
+    if (!db) {
+        setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+        return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    try {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            setUser({ ...firebaseUser, username: userData.username });
+        } else {
+            console.warn("User profile document not found for user:", firebaseUser.uid);
+            setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+        }
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+    }
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser as User);
+        await fetchUserProfile(firebaseUser);
       } else {
         setUser(null);
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [fetchUserProfile]);
+
 
   useEffect(() => {
     if (!loading && user) {
-      // If user is authenticated and on login/register, redirect to dashboard
       if (pathname === '/login' || pathname === '/register') {
         router.replace('/dashboard');
       }
     }
-    // The redirect for unauthenticated users trying to access protected routes
-    // is handled in `src/app/dashboard/layout.tsx`.
-    // No action is needed here for unauthenticated users on public routes.
   }, [user, loading, router, pathname]);
 
 
@@ -125,13 +142,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       router.replace('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
-      // Handle sign out error, maybe show a toast
     } finally {
       setLoading(false);
     }
   };
   
-  const value = { user, loading, signOut };
+  const refetchUser = useCallback(async () => {
+    if (auth?.currentUser) {
+        setLoading(true);
+        await fetchUserProfile(auth.currentUser);
+        setLoading(false);
+    }
+  }, [fetchUserProfile]);
+  
+  const value = { user, loading, signOut, refetchUser };
 
   return (
     <AuthContext.Provider value={value}>

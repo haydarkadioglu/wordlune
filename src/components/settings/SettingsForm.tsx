@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Languages as LanguageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PasswordChangeForm from './PasswordChangeForm'; 
+import UsernameChangeForm from './UsernameChangeForm';
 import { Separator } from '@/components/ui/separator';
 
 export default function SettingsForm() {
@@ -59,11 +60,12 @@ export default function SettingsForm() {
 
   const handleUiLanguageChange = (value: string) => {
     setUiLanguage(value);
-    // No need to call handleSave here as it's a global preference change
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
+      <UsernameChangeForm />
+
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
