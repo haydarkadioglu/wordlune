@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles } from 'lucide-react';
-import { useSettings } from '@/hooks/useSettings';
+import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
 import { translateWord } from '@/ai/flows/translate-word-flow';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const translations = {
   en: {
@@ -29,6 +30,7 @@ const translations = {
     meaningRequired: 'Meaning is required.',
     exampleLabel: 'Example Sentence',
     exampleRequired: 'Example sentence is required.',
+    targetLanguageLabel: 'Translate To',
     cancel: 'Cancel',
     addWord: 'Add Word',
     generate: 'Generate',
@@ -52,6 +54,7 @@ const translations = {
     meaningRequired: 'Anlam alanı zorunludur.',
     exampleLabel: 'Örnek Cümle',
     exampleRequired: 'Örnek cümle zorunludur.',
+    targetLanguageLabel: 'Çeviri Dili',
     cancel: 'İptal',
     addWord: 'Kelime Ekle',
     generate: 'Oluştur',
@@ -94,6 +97,13 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
+  const [dialogTargetLanguage, setDialogTargetLanguage] = useState(targetLanguage);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDialogTargetLanguage(targetLanguage);
+    }
+  }, [isOpen, targetLanguage]);
   
   const form = useForm<FormData>({
     resolver: zodResolver(getFormSchema(uiLanguage as 'en' | 'tr')),
@@ -114,7 +124,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
     try {
       await addWordToList(user.uid, listId, {
         ...values,
-        language: targetLanguage,
+        language: dialogTargetLanguage,
       });
       toast({
         title: "Success!",
@@ -154,7 +164,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
                 throw new Error(t.aiError);
             }
         } else { // translate
-            const result = await translateWord({ word: wordText, sourceLanguage, targetLanguage });
+            const result = await translateWord({ word: wordText, sourceLanguage, targetLanguage: dialogTargetLanguage });
             const meaning = result.translations?.join(', ');
              if (meaning) {
                 form.setValue('meaning', meaning, { shouldValidate: true });
@@ -205,16 +215,32 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
             )}
           </div>
 
-          <div className="space-y-1">
-             <div className="flex justify-between items-center mb-1">
-                <Label htmlFor="meaning">{t.meaningLabel} ({targetLanguage})</Label>
-                <AiButton action="translate" disabled={isTranslating} />
-            </div>
-            <Input id="meaning" {...form.register('meaning')} placeholder="e.g., Yaygın" disabled={isTranslating} />
-            {form.formState.errors.meaning && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.meaning.message}</p>
-            )}
+          <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 space-y-1">
+                <div className="flex justify-between items-center mb-1">
+                    <Label htmlFor="meaning">{t.meaningLabel}</Label>
+                    <AiButton action="translate" disabled={isTranslating} />
+                </div>
+                <Input id="meaning" {...form.register('meaning')} placeholder="e.g., Yaygın" disabled={isTranslating} />
+                {form.formState.errors.meaning && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.meaning.message}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                 <Label htmlFor="target-language">{t.targetLanguageLabel}</Label>
+                 <Select value={dialogTargetLanguage} onValueChange={setDialogTargetLanguage}>
+                    <SelectTrigger id="target-language">
+                        <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {SUPPORTED_LANGUAGES.map(lang => (
+                            <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+              </div>
           </div>
+
 
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-1">

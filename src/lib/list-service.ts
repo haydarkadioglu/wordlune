@@ -128,3 +128,24 @@ export async function deleteWordFromList(
         transaction.update(listDocRef, { wordCount: increment(-1) });
     });
 }
+
+export async function deleteMultipleWordsFromList(
+    userId: string, 
+    listId: string, 
+    wordIds: string[]
+): Promise<void> {
+    if (!userId || !listId || !wordIds.length || !db) throw new Error("Missing required IDs or database unavailable.");
+
+    const listDocRef = doc(db, 'users', userId, 'lists', listId);
+    
+    await runTransaction(db, async (transaction) => {
+        // 1. Delete all the selected word documents
+        wordIds.forEach(wordId => {
+            const wordDocRef = doc(listDocRef, 'words', wordId);
+            transaction.delete(wordDocRef);
+        });
+
+        // 2. Decrement the word count on the parent list
+        transaction.update(listDocRef, { wordCount: increment(-wordIds.length) });
+    });
+}

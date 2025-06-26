@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserList, ListWord } from "@/types";
-import { getListDetails, getWordsForList, deleteWordFromList } from "@/lib/list-service";
+import { getListDetails, getWordsForList, deleteWordFromList, deleteMultipleWordsFromList } from "@/lib/list-service";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, Trash2, ArrowLeft, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AddWordToListDialog from "./AddWordToListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ListDetailClientProps {
     listId: string;
@@ -25,6 +26,8 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const [words, setWords] = useState<ListWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddWordDialogOpen, setIsAddWordDialogOpen] = useState(false);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedWords, setSelectedWords] = useState<string[]>([]);
 
     useEffect(() => {
         if (user) {
@@ -39,7 +42,13 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 setWords(fetchedWords);
                 setIsLoading(false);
             });
-            return () => unsubscribe();
+
+            // Reset selection mode when leaving the page or list changes
+            return () => {
+                unsubscribe();
+                setIsSelectionMode(false);
+                setSelectedWords([]);
+            };
         } else {
             setIsLoading(false);
         }
@@ -64,6 +73,47 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!user || selectedWords.length === 0) return;
+        try {
+            await deleteMultipleWordsFromList(user.uid, listId, selectedWords);
+            toast({
+                title: "Words Deleted",
+                description: `${selectedWords.length} words have been removed from the list.`,
+                variant: "destructive"
+            });
+            setIsSelectionMode(false);
+            setSelectedWords([]);
+        } catch (error) {
+             console.error("Failed to bulk delete words:", error);
+            toast({
+                title: "Error",
+                description: "Could not delete the selected words. Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleToggleSelection = (wordId: string) => {
+        setSelectedWords(prev => 
+            prev.includes(wordId) 
+            ? prev.filter(id => id !== wordId) 
+            : [...prev, wordId]
+        );
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedWords(words.map(w => w.id));
+        } else {
+            setSelectedWords([]);
+        }
+    };
+
+    const toggleSelectionMode = () => {
+        setIsSelectionMode(!isSelectionMode);
+        setSelectedWords([]); // Clear selection when toggling mode
+    };
 
     if (isLoading) {
         return (
@@ -78,8 +128,8 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
                                 <TableHead><Skeleton className="h-5 w-48" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
                                 <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -126,56 +176,108 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 </p>
             </div>
             
-            <div className="flex justify-end">
-                 <Button onClick={() => setIsAddWordDialogOpen(true)}>
-                    <PlusCircle className="mr-2" />
-                    Add New Word
-                </Button>
+            <div className="flex justify-end gap-2">
+                {isSelectionMode ? (
+                    <>
+                        <Button variant="outline" onClick={toggleSelectionMode}>Cancel</Button>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={selectedWords.length === 0}>
+                                    <Trash2 className="mr-2" />
+                                    Delete ({selectedWords.length})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete {selectedWords.length} selected word(s) from this list.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleBulkDelete}>Confirm Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </>
+                ) : (
+                    <>
+                         <Button variant="outline" onClick={toggleSelectionMode}>
+                            <Edit className="mr-2" />
+                            Edit List
+                        </Button>
+                        <Button onClick={() => setIsAddWordDialogOpen(true)}>
+                            <PlusCircle className="mr-2" />
+                            Add New Word
+                        </Button>
+                    </>
+                )}
             </div>
 
             <div className="border rounded-lg bg-card">
                  <Table>
                     <TableHeader>
                         <TableRow>
+                            {isSelectionMode && (
+                                <TableHead className="w-[50px]">
+                                    <Checkbox 
+                                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                        checked={selectedWords.length > 0 && selectedWords.length === words.length}
+                                        aria-label="Select all rows"
+                                    />
+                                </TableHead>
+                            )}
                             <TableHead className="w-[20%]">Word</TableHead>
-                            <TableHead className="w-[25%]">Meaning</TableHead>
                             <TableHead className="w-[45%]">Example Sentence</TableHead>
+                            <TableHead className="w-[25%]">Meaning</TableHead>
                             <TableHead className="w-[10%] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {words.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={isSelectionMode ? 5 : 4} className="h-24 text-center">
                                     No words in this list yet.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             words.map((word) => (
-                                <TableRow key={word.id}>
+                                <TableRow key={word.id} data-state={selectedWords.includes(word.id) && "selected"}>
+                                    {isSelectionMode && (
+                                        <TableCell>
+                                            <Checkbox
+                                                onCheckedChange={() => handleToggleSelection(word.id)}
+                                                checked={selectedWords.includes(word.id)}
+                                                aria-label={`Select word ${word.word}`}
+                                            />
+                                        </TableCell>
+                                    )}
                                     <TableCell className="font-medium">{word.word}</TableCell>
-                                    <TableCell className="text-muted-foreground">{word.meaning} <span className="text-xs text-muted-foreground/50">({word.language})</span></TableCell>
                                     <TableCell className="text-muted-foreground">{word.example}</TableCell>
+                                    <TableCell className="text-muted-foreground">{word.meaning} <span className="text-xs text-muted-foreground/50">({word.language})</span></TableCell>
                                     <TableCell className="text-right">
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete the word "{word.word}" from this list.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteWord(word.id, word.word)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                        {!isSelectionMode && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete the word "{word.word}" from this list.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteWord(word.id, word.word)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
