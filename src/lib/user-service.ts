@@ -17,6 +17,36 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
 }
 
 /**
+ * Retrieves the email address associated with a given username.
+ * @param username The username to look up.
+ * @returns The user's email address, or null if not found.
+ */
+export async function getEmailForUsername(username: string): Promise<string | null> {
+    if (!db) return null;
+    const usernameRef = doc(db, 'usernames', username.toLowerCase());
+    const usernameSnap = await getDoc(usernameRef);
+
+    if (!usernameSnap.exists()) {
+        return null; // Username does not exist
+    }
+
+    const { userId } = usernameSnap.data();
+    if (!userId) {
+        return null; // Username document is malformed
+    }
+    
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+        return null; // User profile does not exist for this username
+    }
+    
+    return userSnap.data().email || null;
+}
+
+
+/**
  * Creates the initial user documents in Firestore after registration.
  * Creates a public username mapping, a private user profile document, and a data container.
  * @param userId The user's unique ID from Firebase Auth.

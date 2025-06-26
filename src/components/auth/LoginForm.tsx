@@ -15,15 +15,15 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
-import { logLoginHistory } from '@/lib/user-service';
+import { logLoginHistory, getEmailForUsername } from '@/lib/user-service';
 
 
 const translations = {
   en: {
     title: "Sign in to WordLune",
     description: "Continue to improve your vocabulary!",
-    emailLabel: "Email",
-    emailPlaceholder: "example@email.com",
+    emailOrUsernameLabel: "Email or Username",
+    emailOrUsernamePlaceholder: "example@email.com or username",
     passwordLabel: "Password",
     signInButton: "Sign In",
     or: "Or",
@@ -34,22 +34,23 @@ const translations = {
     loginSuccess: "Logged in successfully.",
     errorTitle: "Error",
     loginFailed: "Login failed. Please check your credentials.",
-    invalidCredentials: "Incorrect email or password.",
+    invalidCredentials: "Incorrect email/username or password.",
+    userNotFound: "No user found with that email or username.",
     invalidEmail: "Invalid email format.",
     configNotFound: "Firebase authentication configuration not found. Please ensure the Email/Password sign-in method is enabled in your Firebase console.",
     googleSignInError: "Could not sign in with Google. Please try again.",
     popupClosed: "Google sign-in window was closed.",
     popupCancelled: "Google sign-in request was cancelled.",
     googleConfigNotFound: "Firebase authentication configuration not found. Please ensure the Google sign-in method is enabled in your Firebase console.",
-    invalidEmailZod: "Please enter a valid email address.",
+    identifierRequired: "Please enter your email or username.",
     passwordMinLengthZod: "Password must be at least 6 characters.",
     firebaseNotConfigured: "Firebase is not configured. Please check the console for errors.",
   },
   tr: {
     title: "WordLune'a Giriş Yap",
     description: "Kelime hazinenizi geliştirmeye devam edin!",
-    emailLabel: "E-posta",
-    emailPlaceholder: "ornek@eposta.com",
+    emailOrUsernameLabel: "E-posta veya Kullanıcı Adı",
+    emailOrUsernamePlaceholder: "ornek@eposta.com veya kullanıcıadı",
     passwordLabel: "Şifre",
     signInButton: "Giriş Yap",
     or: "Veya",
@@ -60,14 +61,15 @@ const translations = {
     loginSuccess: "Giriş yapıldı.",
     errorTitle: "Hata",
     loginFailed: "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
-    invalidCredentials: "E-posta veya şifre yanlış.",
+    invalidCredentials: "E-posta/kullanıcı adı veya şifre yanlış.",
+    userNotFound: "Bu e-posta veya kullanıcı adına sahip bir kullanıcı bulunamadı.",
     invalidEmail: "Geçersiz e-posta formatı.",
     configNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda E-posta/Şifre ile giriş yönteminin etkinleştirildiğinden emin olun.",
     googleSignInError: "Google ile giriş yapılamadı. Lütfen tekrar deneyin.",
     popupClosed: "Google giriş penceresi kapatıldı.",
     popupCancelled: "Google giriş isteği iptal edildi.",
     googleConfigNotFound: "Firebase kimlik doğrulama yapılandırması bulunamadı. Lütfen Firebase konsolunda Google ile giriş yönteminin etkinleştirildiğinden emin olun.",
-    invalidEmailZod: "Geçerli bir e-posta adresi girin.",
+    identifierRequired: "Lütfen e-postanızı veya kullanıcı adınızı girin.",
     passwordMinLengthZod: "Şifre en az 6 karakter olmalıdır.",
     firebaseNotConfigured: "Firebase yapılandırılmamış. Lütfen konsolu hatalar için kontrol edin.",
   }
@@ -76,7 +78,7 @@ const translations = {
 const getLoginSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
-    email: z.string().email(t.invalidEmailZod),
+    identifier: z.string().min(1, t.identifierRequired),
     password: z.string().min(6, t.passwordMinLengthZod),
   });
 };
@@ -105,7 +107,19 @@ export default function LoginForm() {
       return;
     }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      let email = data.identifier;
+      // If identifier doesn't look like an email, assume it's a username and find the email.
+      if (!email.includes('@')) {
+        const foundEmail = await getEmailForUsername(email);
+        if (!foundEmail) {
+            toast({ title: t.errorTitle, description: t.userNotFound, variant: 'destructive' });
+            setIsLoading(false);
+            return;
+        }
+        email = foundEmail;
+      }
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, data.password);
       await logLoginHistory(userCredential.user.uid);
       toast({ title: t.successTitle, description: t.loginSuccess });
       router.push('/dashboard');
@@ -169,9 +183,9 @@ export default function LoginForm() {
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <Label htmlFor="email">{t.emailLabel}</Label>
-          <Input id="email" type="email" {...register('email')} placeholder={t.emailPlaceholder} className="mt-1" />
-          {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>}
+          <Label htmlFor="identifier">{t.emailOrUsernameLabel}</Label>
+          <Input id="identifier" type="text" {...register('identifier')} placeholder={t.emailOrUsernamePlaceholder} className="mt-1" />
+          {errors.identifier && <p className="mt-1 text-sm text-destructive">{errors.identifier.message}</p>}
         </div>
         <div>
           <Label htmlFor="password">{t.passwordLabel}</Label>
