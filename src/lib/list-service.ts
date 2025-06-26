@@ -2,7 +2,7 @@
 "use client";
 
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction, increment } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction, increment, getDocs } from 'firebase/firestore';
 import type { UserList, ListWord } from '@/types';
 
 // --- List Management ---
@@ -88,6 +88,29 @@ export function getWordsForList(
   });
 
   return unsubscribe;
+}
+
+export async function getAllWordsFromLists(userId: string): Promise<ListWord[]> {
+    if (!userId || !db) return [];
+    
+    const allListWords: ListWord[] = [];
+    const listsCollectionRef = collection(db, 'users', userId, 'lists');
+    const listsSnapshot = await getDocs(listsCollectionRef);
+
+    const wordFetchPromises = listsSnapshot.docs.map(listDoc => {
+        const wordsCollectionRef = collection(db, 'users', userId, 'lists', listDoc.id, 'words');
+        return getDocs(wordsCollectionRef);
+    });
+
+    const wordSnapshots = await Promise.all(wordFetchPromises);
+
+    wordSnapshots.forEach(wordQuerySnapshot => {
+        wordQuerySnapshot.forEach(wordDoc => {
+            allListWords.push({ id: wordDoc.id, ...wordDoc.data() } as ListWord);
+        });
+    });
+    
+    return allListWords;
 }
 
 export async function addWordToList(

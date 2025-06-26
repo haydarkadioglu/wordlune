@@ -1,32 +1,37 @@
+
 "use client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Word } from '@/types';
 import { subDays, format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useSettings } from '@/hooks/useSettings';
 
 const translations = {
   en: {
-    title: 'Weekly Word Additions',
-    description: 'Words added in the last 7 days.',
+    title: 'Word Additions (Last 15 Days)',
+    description: 'Total words added to your main collection and custom lists.',
     legend: 'Words Added',
   },
   tr: {
-    title: 'Haftalık Kelime Ekleme',
-    description: 'Son 7 günde eklenen kelimeler.',
+    title: 'Kelime Ekleme (Son 15 Gün)',
+    description: 'Ana koleksiyonunuza ve özel listelerinize eklenen toplam kelime.',
     legend: 'Eklenen Kelime',
   }
 };
 
-const getWeeklyData = (words: Word[], locale?: Locale) => {
+interface WeeklyWordsChartProps {
+  allWords: { createdAt: number }[];
+}
+
+const getChartDataFor15Days = (words: { createdAt: number }[], locale?: Locale) => {
   const data = [];
   const today = new Date();
-  for (let i = 6; i >= 0; i--) {
+  for (let i = 14; i >= 0; i--) {
     const day = subDays(today, i);
-    const dayStr = format(day, 'EEE', { locale }); // Mon, Tue or Pzt, Sal
+    const dayStr = format(day, 'MMM d', { locale }); 
     
     const wordsAddedOnDay = words.filter(word => {
+      if (!word || !word.createdAt) return false;
       const wordDate = new Date(word.createdAt);
       return format(wordDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
     }).length;
@@ -37,11 +42,11 @@ const getWeeklyData = (words: Word[], locale?: Locale) => {
 };
 
 
-export default function WeeklyWordsChart({ words }: WeeklyWordsChartProps) {
+export default function WeeklyWordsChart({ allWords }: WeeklyWordsChartProps) {
   const { uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   const locale = uiLanguage === 'tr' ? tr : undefined;
-  const chartData = getWeeklyData(words, locale);
+  const chartData = getChartDataFor15Days(allWords, locale);
 
   return (
     <Card className="shadow-lg col-span-1 md:col-span-2 lg:col-span-4">

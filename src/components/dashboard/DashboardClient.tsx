@@ -1,7 +1,7 @@
 
 "use client";
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import type { Word, WordCategory, ProcessedWord } from '@/types';
+import type { Word, WordCategory, ProcessedWord, UserList, ListWord } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,10 @@ import BulkAddWords from './BulkAddWords';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSettings } from '@/hooks/useSettings';
+import { getLists, getAllWordsFromLists } from '@/lib/list-service';
+import ListsShortcut from './ListsShortcut';
 
 const translations = {
   en: {
@@ -65,18 +66,24 @@ export default function DashboardClient() {
   const [preFilledWord, setPreFilledWord] = useState<Partial<Word> | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
+  
+  // New states for lists and list words for the chart
+  const [lists, setLists] = useState<UserList[]>([]);
+  const [listWords, setListWords] = useState<ListWord[]>([]);
+  const [loadingLists, setLoadingLists] = useState(true);
 
   useEffect(() => {
     if (!db) {
         setLoadingWords(false);
+        setLoadingLists(false);
         return;
     }
     if (user && user.uid) {
+      // Listener for main word collection
       setLoadingWords(true);
       const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
-      const q = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
-
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const qWords = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
+      const unsubscribeWords = onSnapshot(qWords, (querySnapshot) => {
         const fetchedWords: Word[] = [];
         querySnapshot.forEach((doc) => {
           fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
@@ -89,12 +96,38 @@ export default function DashboardClient() {
         setLoadingWords(false);
       });
 
-      return () => unsubscribe(); 
+      // Listener for lists (for shortcut)
+      setLoadingLists(true);
+      const unsubscribeLists = getLists(user.uid, (fetchedLists) => {
+          setLists(fetchedLists);
+          setLoadingLists(false);
+      });
+
+      // One-time fetch for all words in all lists (for chart)
+      getAllWordsFromLists(user.uid).then(fetchedListWords => {
+        setListWords(fetchedListWords);
+      }).catch(error => {
+         console.error("Error fetching list words for chart: ", error);
+      });
+
+      return () => {
+        unsubscribeWords();
+        unsubscribeLists();
+      }
     } else {
       setWords([]); 
+      setLists([]);
+      setListWords([]);
       setLoadingWords(false);
+      setLoadingLists(false);
     }
   }, [user, toast]);
+  
+  const allWordsForChart = useMemo(() => {
+    const mainWordDates = words.map(w => ({ createdAt: w.createdAt }));
+    const listWordDates = listWords.map(w => ({ createdAt: w.createdAt }));
+    return [...mainWordDates, ...listWordDates];
+  }, [words, listWords]);
 
   const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'createdAt'>, id?: string) => {
     if (!user || !user.uid || !db) {
@@ -230,6 +263,8 @@ export default function DashboardClient() {
   return (
     <div className="space-y-8">
       <StatsDisplay words={words} />
+
+      <ListsShortcut lists={lists} isLoading={loadingLists} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <QuickTranslator onAddWord={handleAddFromTranslator} />
@@ -303,7 +338,7 @@ export default function DashboardClient() {
         </CardContent>
       </Card>
       
-      <WeeklyWordsChart words={words} />
+      <WeeklyWordsChart allWords={allWordsForChart} />
 
       <AddWordDialog
         isOpen={isDialogOpen}
