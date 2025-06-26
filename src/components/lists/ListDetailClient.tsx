@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserList, ListWord } from "@/types";
-import { getListDetails, getWordsForList, deleteWordFromList, deleteMultipleWordsFromList } from "@/lib/list-service";
+import { getListDetails, getWordsForList, deleteMultipleWordsFromList } from "@/lib/list-service";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, Trash2, ArrowLeft, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import AddWordToListDialog from "./AddWordToListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import BulkAddToList from "./BulkAddToList";
+import { Card } from "../ui/card";
 
 interface ListDetailClientProps {
     listId: string;
@@ -54,25 +56,6 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
         }
     }, [user, listId]);
     
-    const handleDeleteWord = async (wordId: string, wordText: string) => {
-        if (!user) return;
-        try {
-            await deleteWordFromList(user.uid, listId, wordId);
-            toast({
-                title: "Word Deleted",
-                description: `"${wordText}" has been removed from the list.`,
-                variant: "destructive"
-            });
-        } catch (error) {
-            console.error("Failed to delete word:", error);
-            toast({
-                title: "Error",
-                description: "Could not delete the word. Please try again.",
-                variant: "destructive"
-            });
-        }
-    };
-
     const handleBulkDelete = async () => {
         if (!user || selectedWords.length === 0) return;
         try {
@@ -128,9 +111,8 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                <TableHead><Skeleton className="h-5 w-48" /></TableHead>
                                 <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-                                <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-48" /></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -139,7 +121,6 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -176,43 +157,50 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 </p>
             </div>
             
-            <div className="flex justify-end gap-2">
-                {isSelectionMode ? (
-                    <>
-                        <Button variant="outline" onClick={toggleSelectionMode}>Cancel</Button>
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" disabled={selectedWords.length === 0}>
-                                    <Trash2 className="mr-2" />
-                                    Delete ({selectedWords.length})
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will permanently delete {selectedWords.length} selected word(s) from this list.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleBulkDelete}>Confirm Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </>
-                ) : (
-                    <>
-                         <Button variant="outline" onClick={toggleSelectionMode}>
-                            <Edit className="mr-2" />
-                            Edit List
-                        </Button>
-                        <Button onClick={() => setIsAddWordDialogOpen(true)}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                 <Card className="shadow-lg">
+                    <Card.Header>
+                        <Card.Title>Add & Manage Words</Card.Title>
+                        <Card.Description>Add single words or manage the list.</Card.Description>
+                    </Card.Header>
+                    <Card.Content className="flex flex-col sm:flex-row gap-2">
+                        <Button onClick={() => setIsAddWordDialogOpen(true)} className="flex-1">
                             <PlusCircle className="mr-2" />
                             Add New Word
                         </Button>
-                    </>
-                )}
+                        {isSelectionMode ? (
+                            <>
+                                <Button variant="outline" onClick={toggleSelectionMode}>Cancel</Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={selectedWords.length === 0}>
+                                            <Trash2 className="mr-2" />
+                                            Delete ({selectedWords.length})
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete {selectedWords.length} selected word(s) from this list.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkDelete}>Confirm Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={toggleSelectionMode}>
+                                <Edit className="mr-2" />
+                                Edit List
+                            </Button>
+                        )}
+                    </Card.Content>
+                </Card>
+                <BulkAddToList listId={listId} />
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -229,15 +217,14 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                 </TableHead>
                             )}
                             <TableHead className="w-[20%]">Word</TableHead>
-                            <TableHead className="w-[45%]">Example Sentence</TableHead>
                             <TableHead className="w-[25%]">Meaning</TableHead>
-                            <TableHead className="w-[10%] text-right">Actions</TableHead>
+                            <TableHead className="w-[55%]">Example Sentence</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {words.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={isSelectionMode ? 5 : 4} className="h-24 text-center">
+                                <TableCell colSpan={isSelectionMode ? 4 : 3} className="h-24 text-center">
                                     No words in this list yet.
                                 </TableCell>
                             </TableRow>
@@ -254,31 +241,8 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                         </TableCell>
                                     )}
                                     <TableCell className="font-medium">{word.word}</TableCell>
-                                    <TableCell className="text-muted-foreground">{word.example}</TableCell>
                                     <TableCell className="text-muted-foreground">{word.meaning} <span className="text-xs text-muted-foreground/50">({word.language})</span></TableCell>
-                                    <TableCell className="text-right">
-                                        {!isSelectionMode && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently delete the word "{word.word}" from this list.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteWord(word.id, word.word)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{word.example}</TableCell>
                                 </TableRow>
                             ))
                         )}

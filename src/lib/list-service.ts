@@ -129,6 +129,36 @@ export async function deleteWordFromList(
     });
 }
 
+export async function addMultipleWordsToList(
+    userId: string, 
+    listId: string, 
+    processedWords: { text: string, exampleSentence: string, meaning: string }[],
+    targetLanguage: string
+): Promise<void> {
+    if (!userId || !listId || !processedWords.length || !db) throw new Error("Missing required data or db unavailable.");
+
+    const listDocRef = doc(db, 'users', userId, 'lists', listId);
+
+    await runTransaction(db, async (transaction) => {
+        // 1. Add new words
+        const wordsCollectionRef = collection(listDocRef, 'words');
+        processedWords.forEach(pWord => {
+            const newWordRef = doc(wordsCollectionRef);
+            const wordToAdd: Omit<ListWord, 'id'> = {
+                word: pWord.text,
+                example: pWord.exampleSentence,
+                meaning: pWord.meaning,
+                language: targetLanguage,
+                createdAt: Date.now(),
+            };
+            transaction.set(newWordRef, wordToAdd);
+        });
+
+        // 2. Increment word count
+        transaction.update(listDocRef, { wordCount: increment(processedWords.length) });
+    });
+}
+
 export async function deleteMultipleWordsFromList(
     userId: string, 
     listId: string, 
