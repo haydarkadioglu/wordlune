@@ -18,6 +18,7 @@ import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useSettings } from '@/hooks/useSettings';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 const translations = {
   en: {
@@ -57,6 +58,16 @@ export default function AllWordsClient() {
   const [preFilledWord, setPreFilledWord] = useState<Partial<Word> | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam === 'Very Good' || categoryParam === 'Good' || categoryParam === 'Bad') {
+      setCategoryFilter(categoryParam);
+    } else if (categoryParam === 'All') {
+      setCategoryFilter('All');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!db) {

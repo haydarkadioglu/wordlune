@@ -2,6 +2,7 @@ import type { Word, WordCategory } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookMarked, Smile, Meh, Frown } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
+import Link from 'next/link';
 
 const translations = {
   en: {
@@ -26,24 +27,26 @@ export default function StatsDisplay({ words }: StatsDisplayProps) {
   }, {} as Record<WordCategory, number>);
 
   const stats = [
-    { title: t.totalWords, value: totalWords, icon: <BookMarked className="h-6 w-6 text-primary" />, color: "text-primary" },
-    { title: 'Very Good', value: wordsByCategory['Very Good'] || 0, icon: <Smile className="h-6 w-6 text-green-500" />, color: "text-green-500" },
-    { title: 'Good', value: wordsByCategory['Good'] || 0, icon: <Meh className="h-6 w-6 text-sky-500" />, color: "text-sky-500" },
-    { title: 'Bad', value: wordsByCategory['Bad'] || 0, icon: <Frown className="h-6 w-6 text-red-500" />, color: "text-red-500" },
+    { title: t.totalWords, value: totalWords, icon: <BookMarked className="h-6 w-6 text-primary" />, color: "text-primary", category: 'All' },
+    { title: 'Very Good', value: wordsByCategory['Very Good'] || 0, icon: <Smile className="h-6 w-6 text-green-500" />, color: "text-green-500", category: 'Very Good' },
+    { title: 'Good', value: wordsByCategory['Good'] || 0, icon: <Meh className="h-6 w-6 text-sky-500" />, color: "text-sky-500", category: 'Good' },
+    { title: 'Bad', value: wordsByCategory['Bad'] || 0, icon: <Frown className="h-6 w-6 text-red-500" />, color: "text-red-500", category: 'Bad' },
   ];
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => (
-        <Card key={stat.title} className="shadow-md hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-            {stat.icon}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-          </CardContent>
-        </Card>
+         <Link key={stat.title} href={`/dashboard/words${stat.category !== 'All' ? `?category=${stat.category}` : ''}`} className="block">
+          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              {stat.icon}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );
