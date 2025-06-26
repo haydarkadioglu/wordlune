@@ -15,7 +15,7 @@ import AddWordToListDialog from "./AddWordToListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import BulkAddToList from "./BulkAddToList";
-import { Card } from "../ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ListDetailClientProps {
     listId: string;
@@ -159,11 +159,11 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                  <Card className="shadow-lg">
-                    <Card.Header>
-                        <Card.Title>Add & Manage Words</Card.Title>
-                        <Card.Description>Add single words or manage the list.</Card.Description>
-                    </Card.Header>
-                    <Card.Content className="flex flex-col sm:flex-row gap-2">
+                    <CardHeader>
+                        <CardTitle>Add & Manage Words</CardTitle>
+                        <CardDescription>Add single words or manage the list.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col sm:flex-row gap-2">
                         <Button onClick={() => setIsAddWordDialogOpen(true)} className="flex-1">
                             <PlusCircle className="mr-2" />
                             Add New Word
@@ -198,7 +198,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                 Edit List
                             </Button>
                         )}
-                    </Card.Content>
+                    </CardContent>
                 </Card>
                 <BulkAddToList listId={listId} />
             </div>
