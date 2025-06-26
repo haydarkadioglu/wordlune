@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -17,9 +17,10 @@ import { addMultipleWordsToList } from '@/lib/list-service';
 const translations = {
   en: {
     title: 'Bulk Add to List',
-    description: 'Add multiple words at once, separated by commas.',
+    description: 'Add multiple words at once, separated by commas. The AI will generate details for each.',
     placeholder: 'e.g., ephemeral, ubiquitous, serendipity, benevolent...',
     buttonText: 'Process & Add Words',
+    cancel: 'Cancel',
     noWords: 'No words provided',
     noWordsDesc: 'Please enter words separated by commas.',
     wordsAdded: 'Words Added!',
@@ -31,9 +32,10 @@ const translations = {
   },
   tr: {
     title: 'Listeye Toplu Ekle',
-    description: 'Virgülle ayırarak aynı anda birden fazla kelime ekleyin.',
+    description: 'Virgülle ayırarak aynı anda birden fazla kelime ekleyin. Yapay zeka her biri için ayrıntı üretecektir.',
     placeholder: 'örn: ephemeral, ubiquitous, serendipity, benevolent...',
     buttonText: 'İşle ve Kelimeleri Ekle',
+    cancel: 'İptal',
     noWords: 'Hiç kelime girilmedi',
     noWordsDesc: 'Lütfen virgülle ayrılmış kelimeler girin.',
     wordsAdded: 'Kelimeler Eklendi!',
@@ -55,10 +57,12 @@ const getBulkAddSchema = (lang: 'en' | 'tr') => {
 type BulkAddFormData = z.infer<ReturnType<typeof getBulkAddSchema>>;
 
 interface BulkAddToListProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   listId: string;
 }
 
-export default function BulkAddToList({ listId }: BulkAddToListProps) {
+export default function BulkAddToListDialog({ isOpen, onOpenChange, listId }: BulkAddToListProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { sourceLanguage, targetLanguage, uiLanguage } = useSettings();
@@ -79,11 +83,7 @@ export default function BulkAddToList({ listId }: BulkAddToListProps) {
     const wordsArray = data.words.split(',').map(word => word.trim()).filter(word => word.length > 0);
 
     if (wordsArray.length === 0) {
-      toast({
-        title: t.noWords,
-        description: t.noWordsDesc,
-        variant: 'destructive',
-      });
+      toast({ title: t.noWords, description: t.noWordsDesc, variant: 'destructive' });
       setIsProcessing(false);
       return;
     }
@@ -97,11 +97,9 @@ export default function BulkAddToList({ listId }: BulkAddToListProps) {
 
       if (result.processedWords && result.processedWords.length > 0) {
         await addMultipleWordsToList(user.uid, listId, result.processedWords, targetLanguage);
-        toast({
-          title: t.wordsAdded,
-          description: t.wordsAddedDesc(result.processedWords.length),
-        });
+        toast({ title: t.wordsAdded, description: t.wordsAddedDesc(result.processedWords.length) });
         reset(); 
+        onOpenChange(false);
       } else {
         throw new Error(t.aiError);
       }
@@ -116,20 +114,22 @@ export default function BulkAddToList({ listId }: BulkAddToListProps) {
       setIsProcessing(false);
     }
   };
+  
+  const handleDialogClose = () => {
+    if (!isProcessing) {
+        reset();
+        onOpenChange(false);
+    }
+  }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <div className="flex items-center space-x-3">
-          <UploadCloud className="h-8 w-8 text-primary" />
-          <div>
-            <CardTitle className="font-headline text-2xl text-primary">{t.title}</CardTitle>
-            <CardDescription>{t.description}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
           <div>
             <Textarea
               {...register('words')}
@@ -139,12 +139,17 @@ export default function BulkAddToList({ listId }: BulkAddToListProps) {
             />
             {errors.words && <p className="text-sm text-destructive mt-1">{errors.words.message}</p>}
           </div>
-          <Button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-            {t.buttonText}
-          </Button>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isProcessing}>{t.cancel}</Button>
+            </DialogClose>
+            <Button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+              {t.buttonText}
+            </Button>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

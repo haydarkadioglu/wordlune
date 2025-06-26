@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { UserList, ListWord } from "@/types";
 import { getListDetails, getWordsForList, deleteMultipleWordsFromList } from "@/lib/list-service";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2, ArrowLeft, Edit } from "lucide-react";
+import { PlusCircle, Loader2, Trash2, ArrowLeft, Edit, UploadCloud } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -14,8 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import AddWordToListDialog from "./AddWordToListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import BulkAddToList from "./BulkAddToList";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import BulkAddToListDialog from "./BulkAddToList";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ListDetailClientProps {
     listId: string;
@@ -28,6 +28,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const [words, setWords] = useState<ListWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddWordDialogOpen, setIsAddWordDialogOpen] = useState(false);
+    const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
 
@@ -157,24 +158,27 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 </p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                 <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle>Add & Manage Words</CardTitle>
-                        <CardDescription>Add single words or manage the list.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-2">
-                        <Button onClick={() => setIsAddWordDialogOpen(true)} className="flex-1">
-                            <PlusCircle className="mr-2" />
-                            Add New Word
+            <Card>
+                <CardContent className="p-4 flex flex-col sm:flex-row gap-2 justify-between items-center">
+                    <div className="flex gap-2">
+                         <Button onClick={() => setIsAddWordDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Word
                         </Button>
+                         <Button variant="secondary" onClick={() => setIsBulkAddDialogOpen(true)}>
+                            <UploadCloud className="mr-2 h-4 w-4" />
+                            Bulk Add
+                        </Button>
+                    </div>
+
+                    <div className="flex gap-2">
                         {isSelectionMode ? (
                             <>
                                 <Button variant="outline" onClick={toggleSelectionMode}>Cancel</Button>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" disabled={selectedWords.length === 0}>
-                                            <Trash2 className="mr-2" />
+                                            <Trash2 className="mr-2 h-4 w-4" />
                                             Delete ({selectedWords.length})
                                         </Button>
                                     </AlertDialogTrigger>
@@ -193,15 +197,14 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                 </AlertDialog>
                             </>
                         ) : (
-                            <Button variant="outline" onClick={toggleSelectionMode}>
-                                <Edit className="mr-2" />
+                            <Button variant="outline" onClick={toggleSelectionMode} disabled={words.length === 0}>
+                                <Edit className="mr-2 h-4 w-4" />
                                 Edit List
                             </Button>
                         )}
-                    </CardContent>
-                </Card>
-                <BulkAddToList listId={listId} />
-            </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="border rounded-lg bg-card">
                  <Table>
@@ -225,7 +228,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                         {words.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={isSelectionMode ? 4 : 3} className="h-24 text-center">
-                                    No words in this list yet.
+                                    No words in this list yet. Click "Add Word" or "Bulk Add" to get started.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -253,6 +256,11 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
             <AddWordToListDialog 
                 isOpen={isAddWordDialogOpen}
                 onOpenChange={setIsAddWordDialogOpen}
+                listId={listId}
+            />
+             <BulkAddToListDialog
+                isOpen={isBulkAddDialogOpen}
+                onOpenChange={setIsBulkAddDialogOpen}
                 listId={listId}
             />
         </div>
