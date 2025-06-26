@@ -85,6 +85,7 @@ export async function createInitialUserDocuments(userId: string, username: strin
 
 /**
  * Updates a user's username across the necessary documents.
+ * This is a transactional operation to ensure data consistency.
  * @param userId The user's ID.
  * @param oldUsername The user's current username.
  * @param newUsername The desired new username.
@@ -100,16 +101,16 @@ export async function updateUsername(userId: string, oldUsername: string, newUse
         // First, check if the new username is already taken inside the transaction
         const newUsernameSnap = await transaction.get(newUsernameDocRef);
         if (newUsernameSnap.exists()) {
-            throw new Error("Username is already taken.");
+            throw new Error("This username is already taken.");
         }
         
-        // Update the user's profile document
+        // Update the user's profile document with the new username
         transaction.update(userDocRef, { username: newUsername });
         
-        // Create the new username mapping
+        // Create the new username mapping document
         transaction.set(newUsernameDocRef, { userId });
         
-        // Delete the old username mapping
+        // Delete the old username mapping document
         transaction.delete(oldUsernameDocRef);
     });
 }

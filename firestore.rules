@@ -1,43 +1,50 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper function to check if a user is the owner of a document by UID
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // --- USERS Collection ---
-    // Public user profiles
+    // Rules for user profile documents, containing non-public info.
     match /users/{userId} {
-      // Anyone can read a user's public profile
-      allow read: if true;
-      // Only the authenticated user can create or update their own profile
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      // A user can only create their own profile document
+      allow create: if isOwner(userId);
+      
+      // A user can only read their own profile
+      allow read: if isOwner(userId);
+      
+      // A user can update their own profile, but cannot change immutable fields like UID.
+      allow update: if isOwner(userId) && request.resource.data.uid == resource.data.uid;
+      
+      // Users cannot delete their profile documents.
+      allow delete: if false;
     }
 
-    // --- USERNAMES Collection ---
-    // Public mapping of username -> userId
+    // Rules for the public, unique username mapping.
     match /usernames/{username} {
-      // Anyone can read to check if a username exists
+      // Anyone can read a username document to check for existence.
       allow read: if true;
-      // A user can create their username mapping only if the userId in the doc matches their own uid.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Only the user who owns the username can delete it.
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // A user can create a username mapping document only if it points to their own UID.
+      // This prevents a user from claiming a username for someone else.
+      allow create: if isOwner(request.resource.data.userId);
+      
+      // A user can delete their *own* username mapping document.
+      // This rule checks the existing document on the server to verify ownership.
+      allow delete: if isOwner(resource.data.userId);
+      
+      // Username documents cannot be updated in-place; they must be deleted and re-created in a transaction.
+      allow update: if false;
     }
 
-    // --- DATA Collection ---
-    // Main container for user-specific data like words and lists
-    match /data/{userId} {
-      // A user can only access their own data container
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-
-      // Rules for subcollections within the user's data
-      match /{allPaths=**} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
+    // Rules for all other user-specific application data (words, lists, etc.).
+    match /data/{userId}/{document=**} {
+       // A user can perform any action (read, write) only within their own data path.
+      allow read, write: if isOwner(userId);
     }
   }
 }

@@ -23,7 +23,7 @@ const translations = {
     success: 'Username updated!',
     successDesc: 'Your username has been successfully changed.',
     error: 'Error',
-    errorDesc: 'Could not update username.',
+    errorDesc: 'Could not update username. Please try again.',
     sameUsername: 'This is already your username.',
     taken: 'This username is already taken.',
     usernameMin: 'Username must be at least 3 characters.',
@@ -37,7 +37,7 @@ const translations = {
     success: 'Kullanıcı adı güncellendi!',
     successDesc: 'Kullanıcı adınız başarıyla değiştirildi.',
     error: 'Hata',
-    errorDesc: 'Kullanıcı adı güncellenemedi.',
+    errorDesc: 'Kullanıcı adı güncellenemedi. Lütfen tekrar deneyin.',
     sameUsername: 'Bu zaten mevcut kullanıcı adınız.',
     taken: 'Bu kullanıcı adı zaten alınmış.',
     usernameMin: 'Kullanıcı adı en az 3 karakter olmalıdır.',
@@ -68,6 +68,9 @@ export default function UsernameChangeForm() {
 
   const { register, handleSubmit, formState: { errors }, reset, setError } = useForm<UsernameFormData>({
     resolver: zodResolver(getUsernameSchema(uiLanguage as 'en' | 'tr')),
+    defaultValues: {
+        username: user?.username || ''
+    }
   });
 
   useEffect(() => {
@@ -87,6 +90,8 @@ export default function UsernameChangeForm() {
     setIsLoading(true);
 
     try {
+      // Check if the username is taken *before* attempting the transaction.
+      // The transaction will check again, but this provides a faster failure for the user.
       const isTaken = await checkUsernameExists(data.username);
       if (isTaken) {
         setError('username', { type: 'manual', message: t.taken });
@@ -95,6 +100,8 @@ export default function UsernameChangeForm() {
       }
       
       await updateUsername(user.uid, user.username, data.username);
+      
+      // Refetch user data to update the UI with the new username
       await refetchUser();
       
       toast({
