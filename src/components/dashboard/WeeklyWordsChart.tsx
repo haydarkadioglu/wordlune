@@ -20,10 +20,10 @@ const translations = {
 };
 
 interface WeeklyWordsChartProps {
-  allWords: { createdAt: number }[];
+  allWords: { createdAt: any }[];
 }
 
-const getChartDataFor15Days = (words: { createdAt: number }[], locale?: Locale) => {
+const getChartDataFor15Days = (words: { createdAt: any }[], locale?: Locale) => {
   const data = [];
   const today = new Date();
   for (let i = 14; i >= 0; i--) {
@@ -32,7 +32,26 @@ const getChartDataFor15Days = (words: { createdAt: number }[], locale?: Locale) 
     
     const wordsAddedOnDay = words.filter(word => {
       if (!word || !word.createdAt) return false;
-      const wordDate = new Date(word.createdAt);
+
+      let wordDate;
+      // Handle Firestore Timestamp object
+      if (word.createdAt && typeof word.createdAt.toDate === 'function') {
+        wordDate = word.createdAt.toDate();
+      } 
+      // Handle JS timestamp number
+      else if (typeof word.createdAt === 'number') {
+        wordDate = new Date(word.createdAt);
+      } 
+      // Unrecognized format, skip
+      else {
+        return false;
+      }
+        
+      // Final check for invalid date
+      if (isNaN(wordDate.getTime())) {
+          return false;
+      }
+
       return format(wordDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
     }).length;
 
