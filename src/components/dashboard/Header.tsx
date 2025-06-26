@@ -66,6 +66,7 @@ export default function Header() {
           <Logo />
           <nav className="hidden md:flex items-center gap-2">
             <NavLink href="/dashboard">Dashboard</NavLink>
+            <NavLink href="/dashboard/words">All Words</NavLink>
             <NavLink href="/dashboard/lists">My Lists</NavLink>
           </nav>
         </div>

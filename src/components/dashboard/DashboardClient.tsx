@@ -3,15 +3,13 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Word, WordCategory, ProcessedWord, UserList, ListWord } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Search, Filter, XCircle, Loader2, AlertTriangle, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Search, Filter, XCircle, Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
 import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
-import WordTable from '@/components/words/WordTable';
 import StatsDisplay from './StatsDisplay';
 import WeeklyWordsChart from './WeeklyWordsChart';
 import QuickTranslator from './QuickTranslator';
@@ -23,6 +21,8 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSettings } from '@/hooks/useSettings';
 import { getLists, getAllWordsFromLists } from '@/lib/list-service';
 import ListsShortcut from './ListsShortcut';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const translations = {
   en: {
@@ -32,11 +32,10 @@ const translations = {
     yourWords: 'Your Words',
     yourWordsDesc: 'View, search, and manage your saved words.',
     addNewWord: 'Add New Word',
-    searchPlaceholder: 'Search words, meanings, or examples...',
+    searchPlaceholder: 'Search words...',
     filterByCategory: 'Filter by category',
     allCategories: 'All Categories',
-    cardsView: 'Cards',
-    tableView: 'Table',
+    viewAll: 'View All',
   },
   tr: {
     loadingWords: 'Kelimeleriniz yükleniyor...',
@@ -45,13 +44,14 @@ const translations = {
     yourWords: 'Kelimeleriniz',
     yourWordsDesc: 'Kaydedilen kelimelerinizi görüntüleyin, arayın ve yönetin.',
     addNewWord: 'Yeni Kelime Ekle',
-    searchPlaceholder: 'Kelime, anlam veya örnek arayın...',
+    searchPlaceholder: 'Kelime ara...',
     filterByCategory: 'Kategoriye göre filtrele',
     allCategories: 'Tüm Kategoriler',
-    cardsView: 'Kartlar',
-    tableView: 'Tablo',
+    viewAll: 'Hepsini Gör',
   }
 };
+
+const WORDS_TO_SHOW_ON_DASHBOARD = 9;
 
 export default function DashboardClient() {
   const { user } = useAuth();
@@ -67,7 +67,6 @@ export default function DashboardClient() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
   
-  // New states for lists and list words for the chart
   const [lists, setLists] = useState<UserList[]>([]);
   const [listWords, setListWords] = useState<ListWord[]>([]);
   const [loadingLists, setLoadingLists] = useState(true);
@@ -79,7 +78,6 @@ export default function DashboardClient() {
         return;
     }
     if (user && user.uid) {
-      // Listener for main word collection
       setLoadingWords(true);
       const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
       const qWords = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
@@ -96,14 +94,12 @@ export default function DashboardClient() {
         setLoadingWords(false);
       });
 
-      // Listener for lists (for shortcut)
       setLoadingLists(true);
       const unsubscribeLists = getLists(user.uid, (fetchedLists) => {
           setLists(fetchedLists);
           setLoadingLists(false);
       });
 
-      // One-time fetch for all words in all lists (for chart)
       getAllWordsFromLists(user.uid).then(fetchedListWords => {
         setListWords(fetchedListWords);
       }).catch(error => {
@@ -153,6 +149,21 @@ export default function DashboardClient() {
         toast({ title: "Error saving word", description: error.message, variant: "destructive" });
     }
   };
+  
+  const handleUpdateWordCategory = async (id: string, category: WordCategory) => {
+    if (!user || !user.uid || !db) {
+      toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+      return;
+    }
+    try {
+        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
+        await updateDoc(wordDocRef, { category });
+        toast({ title: "Category Updated", description: "The word's category has been changed." });
+    } catch (error: any) {
+        console.error("Error updating category: ", error);
+        toast({ title: "Error", description: "Could not update the category.", variant: "destructive" });
+    }
+  };
 
   const handleBulkSaveWords = async (processedWords: Omit<ProcessedWord, 'id' | 'createdAt' | 'category'>[]) => {
     if (!user || !user.uid || !db) {
@@ -164,12 +175,12 @@ export default function DashboardClient() {
     const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
 
     processedWords.forEach(word => {
-        const newWordRef = doc(wordsCollectionRef); // Create a new doc with a unique ID
+        const newWordRef = doc(wordsCollectionRef);
         const wordToSave: Omit<Word, 'id'> = {
             ...word,
-            category: 'Good', // Default category for bulk added words
+            category: 'Good', 
             createdAt: Date.now(),
-            pronunciationText: '', // This can be added later if needed
+            pronunciationText: '', 
         };
         batch.set(newWordRef, wordToSave);
     });
@@ -220,20 +231,22 @@ export default function DashboardClient() {
 
   const filteredWords = useMemo(() => {
     return words.filter(word => {
-      const matchesSearchTerm = word.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (word.meaning && word.meaning.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                (word.exampleSentence && word.exampleSentence.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearchTerm = word.text.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = categoryFilter === 'All' || word.category === categoryFilter;
       return matchesSearchTerm && matchesCategory;
     });
   }, [words, searchTerm, categoryFilter]);
+  
+  const displayedWords = useMemo(() => {
+      return filteredWords.slice(0, WORDS_TO_SHOW_ON_DASHBOARD);
+  }, [filteredWords]);
   
   const clearFilters = () => {
     setSearchTerm('');
     setCategoryFilter('All');
   };
   
-  const renderWordContent = (view: 'list' | 'table') => {
+  const renderWordContent = () => {
      if (loadingWords) { 
         return (
              <div className="flex justify-center items-center h-64">
@@ -242,10 +255,7 @@ export default function DashboardClient() {
             </div>
         );
     }
-    if (view === 'list') {
-      return <WordList words={filteredWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} />;
-    }
-    return <WordTable words={filteredWords} />;
+    return <WordList words={displayedWords} onDeleteWord={handleDeleteWord} onEditWord={handleEditWord} onUpdateCategory={handleUpdateWordCategory} />;
   }
 
   if (!db) {
@@ -264,11 +274,14 @@ export default function DashboardClient() {
     <div className="space-y-8">
       <StatsDisplay words={words} />
 
-      <ListsShortcut lists={lists} isLoading={loadingLists} />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <QuickTranslator onAddWord={handleAddFromTranslator} />
-        <BulkAddWords onBulkSave={handleBulkSaveWords} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-1">
+          <ListsShortcut lists={lists} isLoading={loadingLists} />
+        </div>
+        <div className="lg:col-span-2 grid grid-cols-1 gap-8">
+          <QuickTranslator onAddWord={handleAddFromTranslator} />
+          <BulkAddWords onBulkSave={handleBulkSaveWords} />
+        </div>
       </div>
 
       <Card className="shadow-lg">
@@ -284,57 +297,54 @@ export default function DashboardClient() {
             </div>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="card-view" className="w-full">
-                <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border rounded-lg bg-card-foreground/5 items-center">
-                    <div className="flex-grow relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            type="text"
-                            placeholder={t.searchPlaceholder}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                            disabled={!user || loadingWords}
-                        />
-                    </div>
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="flex-grow sm:flex-grow-0 sm:w-48 relative">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                            <Select
-                                value={categoryFilter}
-                                onValueChange={(value) => setCategoryFilter(value as WordCategory | 'All')}
-                                disabled={!user || loadingWords}
-                            >
-                                <SelectTrigger className="pl-10">
-                                    <SelectValue placeholder={t.filterByCategory} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="All">{t.allCategories}</SelectItem>
-                                    <SelectItem value="Very Good">Very Good</SelectItem>
-                                    <SelectItem value="Good">Good</SelectItem>
-                                    <SelectItem value="Bad">Bad</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {(searchTerm || categoryFilter !== 'All') && (
-                            <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary p-2" disabled={!user || loadingWords}>
-                                <XCircle className="h-5 w-5" />
-                            </Button>
-                        )}
-                    </div>
-                    <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                        <TabsTrigger value="card-view"><LayoutGrid className="mr-2 h-4 w-4" />{t.cardsView}</TabsTrigger>
-                        <TabsTrigger value="table-view"><List className="mr-2 h-4 w-4" />{t.tableView}</TabsTrigger>
-                    </TabsList>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border rounded-lg bg-card-foreground/5 items-center">
+                <div className="flex-grow relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                        type="text"
+                        placeholder={t.searchPlaceholder}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                        disabled={!user || loadingWords}
+                    />
                 </div>
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="flex-grow sm:flex-grow-0 sm:w-48 relative">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Select
+                            value={categoryFilter}
+                            onValueChange={(value) => setCategoryFilter(value as WordCategory | 'All')}
+                            disabled={!user || loadingWords}
+                        >
+                            <SelectTrigger className="pl-10">
+                                <SelectValue placeholder={t.filterByCategory} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">{t.allCategories}</SelectItem>
+                                <SelectItem value="Very Good">Very Good</SelectItem>
+                                <SelectItem value="Good">Good</SelectItem>
+                                <SelectItem value="Bad">Bad</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {(searchTerm || categoryFilter !== 'All') && (
+                        <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground hover:text-primary p-2" disabled={!user || loadingWords}>
+                            <XCircle className="h-5 w-5" />
+                        </Button>
+                    )}
+                </div>
+            </div>
 
-                <TabsContent value="card-view">
-                  {renderWordContent('list')}
-                </TabsContent>
-                <TabsContent value="table-view">
-                  {renderWordContent('table')}
-                </TabsContent>
-            </Tabs>
+            {renderWordContent()}
+
+            {filteredWords.length > WORDS_TO_SHOW_ON_DASHBOARD && (
+              <div className="mt-8 text-center">
+                <Link href="/dashboard/words" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
+                  {t.viewAll} ({filteredWords.length}) <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </div>
+            )}
         </CardContent>
       </Card>
       
