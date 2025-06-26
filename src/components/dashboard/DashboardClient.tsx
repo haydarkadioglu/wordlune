@@ -79,7 +79,7 @@ export default function DashboardClient() {
     }
     if (user && user.uid) {
       setLoadingWords(true);
-      const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
+      const wordsCollectionRef = collection(db, 'data', user.uid, 'words');
       const qWords = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
       const unsubscribeWords = onSnapshot(qWords, (querySnapshot) => {
         const fetchedWords: Word[] = [];
@@ -132,12 +132,12 @@ export default function DashboardClient() {
     }
 
     try {
-      const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
       if (id) { 
-        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
+        const wordDocRef = doc(db, 'data', user.uid, 'words', id);
         await updateDoc(wordDocRef, { ...newWordData });
         toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.`});
       } else { 
+        const wordsCollectionRef = collection(db, 'data', user.uid, 'words');
         const wordWithMeta = { ...newWordData, createdAt: Date.now() };
         await addDoc(wordsCollectionRef, wordWithMeta);
         toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.`});
@@ -156,7 +156,7 @@ export default function DashboardClient() {
       return;
     }
     try {
-        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
+        const wordDocRef = doc(db, 'data', user.uid, 'words', id);
         await updateDoc(wordDocRef, { category });
         toast({ title: "Category Updated", description: "The word's category has been changed." });
     } catch (error: any) {
@@ -172,7 +172,7 @@ export default function DashboardClient() {
     }
 
     const batch = writeBatch(db);
-    const wordsCollectionRef = collection(db, 'users', user.uid, 'words');
+    const wordsCollectionRef = collection(db, 'data', user.uid, 'words');
 
     processedWords.forEach(word => {
         const newWordRef = doc(wordsCollectionRef);
@@ -200,7 +200,7 @@ export default function DashboardClient() {
     }
     const wordToDelete = words.find(w => w.id === id);
     try {
-        const wordDocRef = doc(db, 'users', user.uid, 'words', id);
+        const wordDocRef = doc(db, 'data', user.uid, 'words', id);
         await deleteDoc(wordDocRef);
         if (wordToDelete) {
           toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });

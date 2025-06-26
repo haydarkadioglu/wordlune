@@ -18,7 +18,7 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
 
 /**
  * Creates the initial user documents in Firestore after registration.
- * Creates a public username mapping and a private user profile document.
+ * Creates a public username mapping, a private user profile document, and a data container.
  * @param userId The user's unique ID from Firebase Auth.
  * @param username The user's chosen unique username.
  * @param displayName The user's display name.
@@ -29,6 +29,7 @@ export async function createInitialUserDocuments(userId: string, username: strin
     
     const userDocRef = doc(db, 'users', userId);
     const usernameDocRef = doc(db, 'usernames', username.toLowerCase());
+    const dataDocRef = doc(db, 'data', userId);
     
     const batch = writeBatch(db);
 
@@ -42,6 +43,11 @@ export async function createInitialUserDocuments(userId: string, username: strin
 
     batch.set(usernameDocRef, {
         userId: userId
+    });
+    
+    // Create the data container document for the user
+    batch.set(dataDocRef, {
+      createdAt: serverTimestamp()
     });
     
     await batch.commit();
