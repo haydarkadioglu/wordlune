@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun } from 'lucide-react';
+import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun, Mail, Github, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -34,6 +34,12 @@ const translations = {
     feature2Content: "Save words you encounter, categorize them by how well you know them, and build your personal dictionary.",
     feature3Title: "Track Your Progress",
     feature3Content: "Visualize your learning journey with stats and charts. See how many words you've added and mastered over time.",
+     // Contact
+    contactTitle: "Get in Touch",
+    contactSubtitle: "Feel free to reach out for any questions, suggestions, or collaboration proposals.",
+    contactInfoTitle: "Contact Information",
+    country: "Turkey",
+    githubUser: "github.com/haydarkadioglu",
     // Footer
     footerText: "All rights reserved.",
     loading: "Loading...",
@@ -57,6 +63,12 @@ const translations = {
     feature2Content: "Karşılaştığınız kelimeleri kaydedin, ne kadar iyi bildiğinize göre kategorilere ayırın ve kişisel sözlüğünüzü oluşturun.",
     feature3Title: "İlerlemenizi Takip Edin",
     feature3Content: "Öğrenme yolculuğunuzu istatistikler ve grafiklerle görselleştirin. Zamanla kaç kelime eklediğinizi ve ustalaştığınızı görün.",
+    // Contact
+    contactTitle: "İletişime Geçin",
+    contactSubtitle: "Herhangi bir soru, öneri veya işbirliği teklifi için bizimle iletişime geçmekten çekinmeyin.",
+    contactInfoTitle: "İletişim Bilgileri",
+    country: "Türkiye",
+    githubUser: "github.com/haydarkadioglu",
     // Footer
     footerText: "Tüm hakları saklıdır.",
     loading: "Yükleniyor...",
@@ -232,6 +244,54 @@ export default function LandingPage() {
                   {t.feature3Content}
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </section>
+        
+        {/* Contact Section */}
+        <section className="py-20 lg:py-24 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold tracking-tight">{t.contactTitle}</h2>
+              <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">{t.contactSubtitle}</p>
+            </div>
+            <div className="grid lg:grid-cols-5 gap-12 items-center">
+              <div className="lg:col-span-2 space-y-8">
+                <Card className="shadow-lg p-6 border-l-4 border-primary">
+                   <CardHeader className="p-0 mb-4">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <MapPin className="h-6 w-6 text-primary" /> {t.contactInfoTitle}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 space-y-4 text-muted-foreground">
+                     <div className="flex items-center gap-4">
+                        <span>{t.country}</span>
+                    </div>
+                    <a href="mailto:info@notiral.com" className="flex items-center gap-4 hover:text-primary transition-colors">
+                      <Mail className="h-5 w-5" />
+                      <span>info@notiral.com</span>
+                    </a>
+                    <a href="https://github.com/haydarkadioglu" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 hover:text-primary transition-colors">
+                      <Github className="h-5 w-5" />
+                      <span>{t.githubUser}</span>
+                    </a>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="lg:col-span-3">
+                <div className="rounded-lg overflow-hidden shadow-2xl border">
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6342495.733562607!2d30.41302558359374!3d39.0418428989476!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14b0155c964f2671%3A0x40d9dbd42a625f2a!2zVMO8cmtpeWU!5e0!3m2!1str!2str!4v1625835637890!5m2!1str!2str"
+                    width="100%"
+                    height="400"
+                    style={{ border: 0 }}
+                    allowFullScreen={true}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="dark:filter dark:grayscale-100 dark:invert-90 dark:contrast-125"
+                  ></iframe>
+                </div>
+              </div>
             </div>
           </div>
         </section>

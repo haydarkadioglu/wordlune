@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from "@/components/ui/toaster";
+import PageTransitionWrapper from '@/components/common/PageTransitionWrapper';
 
 export const metadata: Metadata = {
   title: 'WordLune - Master Your Vocabulary',
@@ -38,7 +39,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+          <PageTransitionWrapper>
+            {children}
+          </PageTransitionWrapper>
           <Toaster />
         </AuthProvider>
       </body>
