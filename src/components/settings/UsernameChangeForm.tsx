@@ -18,7 +18,7 @@ import { checkUsernameExists, updateUsername } from '@/lib/user-service';
 const translations = {
   en: {
     username: 'Username',
-    description: 'This is your unique and public name. You can only change it once every 30 days.',
+    description: 'This is your unique and public name.',
     saveChanges: 'Save Changes',
     success: 'Username updated!',
     successDesc: 'Your username has been successfully changed.',
@@ -32,7 +32,7 @@ const translations = {
   },
   tr: {
     username: 'Kullanıcı Adı',
-    description: 'Bu sizin benzersiz ve herkese açık adınızdır. Her 30 günde bir değiştirebilirsiniz.',
+    description: 'Bu sizin benzersiz ve herkese açık adınızdır.',
     saveChanges: 'Değişiklikleri Kaydet',
     success: 'Kullanıcı adı güncellendi!',
     successDesc: 'Kullanıcı adınız başarıyla değiştirildi.',
@@ -90,8 +90,6 @@ export default function UsernameChangeForm() {
     setIsLoading(true);
 
     try {
-      // Check if the username is taken *before* attempting the transaction.
-      // The transaction will check again, but this provides a faster failure for the user.
       const isTaken = await checkUsernameExists(data.username);
       if (isTaken) {
         setError('username', { type: 'manual', message: t.taken });
@@ -101,7 +99,6 @@ export default function UsernameChangeForm() {
       
       await updateUsername(user.uid, user.username, data.username);
       
-      // Refetch user data to update the UI with the new username
       await refetchUser();
       
       toast({
