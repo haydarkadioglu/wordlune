@@ -1,11 +1,10 @@
-
 'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun, Mail, Github, MapPin } from 'lucide-react';
+import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun, Mail, Github, MapPin, Smartphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -25,6 +24,7 @@ const translations = {
     heroTitle: "Master Vocabulary with AI",
     heroSubtitle: "WordLune is the smart way to save, practice, and truly learn new words. Stop forgetting, start mastering.",
     getStarted: "Get Started for Free",
+    getAndroidApp: "Get the Android App",
     // Features
     featuresTitle: "Everything You Need to Learn",
     featuresSubtitle: "From AI-powered tools to progress tracking, we've got you covered.",
@@ -54,6 +54,7 @@ const translations = {
     heroTitle: "Yapay Zeka ile Kelime Dağarcığınızı Geliştirin",
     heroSubtitle: "WordLune, yeni kelimeleri kaydetmenin, pratik yapmanın ve gerçekten öğrenmenin akıllı yoludur. Unutmayı bırakın, ustalaşmaya başlayın.",
     getStarted: "Ücretsiz Başlayın",
+    getAndroidApp: "Android Uygulamasını İndir",
     // Features
     featuresTitle: "Öğrenmek İçin İhtiyacınız Olan Her Şey",
     featuresSubtitle: "Yapay zeka destekli araçlardan ilerleme takibine kadar her konuda yanınızdayız.",
@@ -195,9 +196,12 @@ export default function LandingPage() {
             <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
               {t.heroSubtitle}
             </p>
-            <div className="mt-8 flex justify-center gap-4">
+            <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
               <Link href="/register" className={cn(buttonVariants({ size: 'lg' }), "bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground shadow-lg hover:shadow-xl transition-shadow")}>
                 {t.getStarted} <ArrowRight className="ml-2" />
+              </Link>
+               <Link href="https://drive.google.com/file/d/1RmdvZeKlPZ99OUdlB8gtHm5JSRt3tOQR/view?usp=sharing" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), "border-primary text-primary hover:bg-primary/10 shadow-lg hover:shadow-xl transition-shadow")}>
+                <Smartphone className="mr-2" /> {t.getAndroidApp}
               </Link>
             </div>
           </div>
