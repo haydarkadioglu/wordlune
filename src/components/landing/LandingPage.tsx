@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -7,7 +6,6 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, BookOpen, BarChart3, ArrowRight, Languages, Moon, Sun, Mail, Github, MapPin, Smartphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
@@ -158,15 +156,8 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const { uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
-  const router = useRouter();
   const [androidAppUrl, setAndroidAppUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace('/dashboard');
-    }
-  }, [user, loading, router]);
-  
   useEffect(() => {
     const fetchAndroidLink = async () => {
       if (!db) return;
@@ -186,13 +177,13 @@ export default function LandingPage() {
     fetchAndroidLink();
   }, []);
 
-  if (loading || user) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary mb-4 animate-pulse">
           <span className="text-4xl font-bold text-primary-foreground">W</span>
         </div>
-        <p className="text-muted-foreground">{ loading ? t.loading : t.redirecting}</p>
+        <p className="text-muted-foreground">{t.loading}</p>
       </div>
     );
   }
