@@ -1,32 +1,38 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read/update their own profile.
+    // Users: Private user profile information.
+    // READ: Only the owner can read their own profile.
+    // WRITE: Only the owner can create or update their own profile.
     match /users/{userId} {
-      allow read, create: if request.auth.uid == userId;
-
-      // Allow a user to update their own profile, specifically for username changes.
-      allow update: if request.auth.uid == userId && request.resource.data.username != resource.data.username;
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Rules for the 'usernames' collection to ensure uniqueness and security.
+    // Usernames: Public mapping of unique usernames to user IDs.
+    // READ: Anyone can read to check for existence.
+    // CREATE: A user can create their own username mapping if they are logged in.
+    // DELETE: A user can delete their own old username mapping as part of an update.
     match /usernames/{username} {
-      // Any authenticated user can check if a username exists (for registration/update forms).
-      allow read: if request.auth != null;
-
-      // A user can only create a username entry that maps to their own userId.
-      allow create: if request.auth.uid == request.resource.data.userId;
-
-      // A user can only delete their own username entry.
-      // `resource.data` refers to the document state *before* the operation.
-      allow delete: if request.auth.uid == resource.data.userId;
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Rules for the user-specific data (words, lists, etc.)
-    match /data/{userId}/{documents=**} {
-      allow read, write: if request.auth.uid == userId;
+    // Data: Contains all application-specific data for a user (words, lists, etc).
+    // READ/WRITE: Access is granted only if the user is the owner of the data document.
+    match /data/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Versions: Contains app version info and download links.
+    // READ: Anyone can read this data.
+    // WRITE: No one can write to this collection from the client-side.
+    match /versions/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

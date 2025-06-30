@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -12,6 +13,8 @@ import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 
 const translations = {
@@ -156,12 +159,32 @@ export default function LandingPage() {
   const { uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   const router = useRouter();
+  const [androidAppUrl, setAndroidAppUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
       router.replace('/dashboard');
     }
   }, [user, loading, router]);
+  
+  useEffect(() => {
+    const fetchAndroidLink = async () => {
+      if (!db) return;
+      try {
+        const docRef = doc(db, "versions", "android-app-link");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().link) {
+          setAndroidAppUrl(docSnap.data().link);
+        } else {
+          console.warn("Android app link not found in Firestore.");
+        }
+      } catch (error) {
+        console.error("Error fetching Android app link:", error);
+      }
+    };
+
+    fetchAndroidLink();
+  }, []);
 
   if (loading || user) {
     return (
@@ -200,9 +223,11 @@ export default function LandingPage() {
               <Link href="/register" className={cn(buttonVariants({ size: 'lg' }), "bg-primary hover:bg-accent text-primary-foreground hover:text-accent-foreground shadow-lg hover:shadow-xl transition-shadow")}>
                 {t.getStarted} <ArrowRight className="ml-2" />
               </Link>
-               <Link href="https://drive.google.com/file/d/1RmdvZeKlPZ99OUdlB8gtHm5JSRt3tOQR/view?usp=sharing" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), "border-primary text-primary hover:bg-primary/10 shadow-lg hover:shadow-xl transition-shadow")}>
-                <Smartphone className="mr-2" /> {t.getAndroidApp}
-              </Link>
+               {androidAppUrl && (
+                  <Link href={androidAppUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), "border-primary text-primary hover:bg-primary/10 shadow-lg hover:shadow-xl transition-shadow")}>
+                    <Smartphone className="mr-2" /> {t.getAndroidApp}
+                  </Link>
+               )}
             </div>
           </div>
         </section>
