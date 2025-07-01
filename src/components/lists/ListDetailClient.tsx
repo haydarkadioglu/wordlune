@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserList, ListWord } from "@/types";
 import { getListDetails, getWordsForList, deleteMultipleWordsFromList } from "@/lib/list-service";
@@ -16,14 +16,70 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import BulkAddToListDialog from "./BulkAddToList";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSettings } from "@/hooks/useSettings";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ListDetailClientProps {
     listId: string;
 }
 
+const translations = {
+  en: {
+    back: 'Back to Lists',
+    listNotFound: 'List not found',
+    listNotFoundDesc: 'This list may have been deleted or does not exist.',
+    goBack: 'Go back to lists',
+    wordsInCollection: (count: number) => `${count} words in this collection.`,
+    addWord: 'Add Word',
+    bulkAdd: 'Bulk Add',
+    editList: 'Edit List',
+    cancel: 'Cancel',
+    deleteSelected: (count: number) => `Delete (${count})`,
+    deleteConfirmTitle: 'Are you sure?',
+    deleteConfirmDesc: (count: number) => `This will permanently delete ${count} selected word(s) from this list.`,
+    confirmDelete: 'Confirm Delete',
+    noWords: 'No words in this list yet. Click "Add Word" or "Bulk Add" to get started.',
+    wordHeader: 'Word',
+    meaningHeader: 'Meaning',
+    exampleHeader: 'Example Sentence',
+    sortBy: 'Sort by',
+    dateNewest: 'Date (Newest)',
+    dateOldest: 'Date (Oldest)',
+    alphabeticalAZ: 'Alphabetical (A-Z)',
+    alphabeticalZA: 'Alphabetical (Z-A)',
+  },
+  tr: {
+    back: 'Listelere Geri Dön',
+    listNotFound: 'Liste bulunamadı',
+    listNotFoundDesc: 'Bu liste silinmiş veya mevcut olmayabilir.',
+    goBack: 'Listelere geri dön',
+    wordsInCollection: (count: number) => `Bu koleksiyonda ${count} kelime var.`,
+    addWord: 'Kelime Ekle',
+    bulkAdd: 'Toplu Ekle',
+    editList: 'Listeyi Düzenle',
+    cancel: 'İptal',
+    deleteSelected: (count: number) => `Seçilenleri Sil (${count})`,
+    deleteConfirmTitle: 'Emin misiniz?',
+    deleteConfirmDesc: (count: number) => `Bu işlem, seçilen ${count} kelimeyi bu listeden kalıcı olarak silecek.`,
+    confirmDelete: 'Silmeyi Onayla',
+    noWords: 'Bu listede henüz kelime yok. Başlamak için "Kelime Ekle" veya "Toplu Ekle"ye tıklayın.',
+    wordHeader: 'Kelime',
+    meaningHeader: 'Anlam',
+    exampleHeader: 'Örnek Cümle',
+    sortBy: 'Sırala',
+    dateNewest: 'Tarih (Yeniden Eskiye)',
+    dateOldest: 'Tarih (Eskiden Yeniye)',
+    alphabeticalAZ: 'Alfabetik (A-Z)',
+    alphabeticalZA: 'Alfabetik (Z-A)',
+  }
+};
+
+type SortOption = 'date_desc' | 'date_asc' | 'alpha_asc' | 'alpha_desc';
+
 export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const { user } = useAuth();
     const { toast } = useToast();
+    const { uiLanguage } = useSettings();
     const [list, setList] = useState<UserList | null>(null);
     const [words, setWords] = useState<ListWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +87,9 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
+    const [sortOption, setSortOption] = useState<SortOption>('date_desc');
+
+    const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
     useEffect(() => {
         if (user) {
@@ -46,7 +105,6 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 setIsLoading(false);
             });
 
-            // Reset selection mode when leaving the page or list changes
             return () => {
                 unsubscribe();
                 setIsSelectionMode(false);
@@ -96,8 +154,23 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
 
     const toggleSelectionMode = () => {
         setIsSelectionMode(!isSelectionMode);
-        setSelectedWords([]); // Clear selection when toggling mode
+        setSelectedWords([]);
     };
+
+    const sortedWords = useMemo(() => {
+        const newWords = [...words];
+        switch (sortOption) {
+            case 'date_asc':
+                return newWords.sort((a, b) => a.createdAt - b.createdAt);
+            case 'alpha_asc':
+                return newWords.sort((a, b) => a.word.localeCompare(b.word));
+            case 'alpha_desc':
+                return newWords.sort((a, b) => b.word.localeCompare(a.word));
+            case 'date_desc':
+            default:
+                return newWords.sort((a, b) => b.createdAt - a.createdAt);
+        }
+    }, [words, sortOption]);
 
     if (isLoading) {
         return (
@@ -134,10 +207,10 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     if (!list) {
         return (
              <div className="text-center py-20">
-                <h3 className="text-xl font-semibold">List not found</h3>
-                <p className="text-muted-foreground mt-2">This list may have been deleted or does not exist.</p>
+                <h3 className="text-xl font-semibold">{t.listNotFound}</h3>
+                <p className="text-muted-foreground mt-2">{t.listNotFoundDesc}</p>
                 <Button asChild variant="link" className="mt-4">
-                    <Link href="/dashboard/lists">Go back to lists</Link>
+                    <Link href="/dashboard/lists">{t.goBack}</Link>
                 </Button>
             </div>
         );
@@ -149,49 +222,62 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 <Button asChild variant="ghost" className="mb-4 pl-1">
                     <Link href="/dashboard/lists">
                         <ArrowLeft className="mr-2" />
-                        Back to Lists
+                        {t.back}
                     </Link>
                 </Button>
                 <h1 className="text-3xl font-bold tracking-tight text-primary">{list.name}</h1>
                 <p className="text-muted-foreground mt-1">
-                    {list.wordCount || 0} words in this collection.
+                    {t.wordsInCollection(list.wordCount || 0)}
                 </p>
             </div>
             
             <Card>
-                <CardContent className="p-4 flex flex-col sm:flex-row gap-2 justify-between items-center">
-                    <div className="flex gap-2">
+                <CardContent className="p-4 flex flex-col sm:flex-row gap-2 justify-between items-center flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
                          <Button onClick={() => setIsAddWordDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Word
+                            {t.addWord}
                         </Button>
                          <Button variant="secondary" onClick={() => setIsBulkAddDialogOpen(true)}>
                             <UploadCloud className="mr-2 h-4 w-4" />
-                            Bulk Add
+                            {t.bulkAdd}
                         </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap justify-end w-full sm:w-auto">
+                        <div className="w-full sm:w-[180px]">
+                            <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t.sortBy} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="date_desc">{t.dateNewest}</SelectItem>
+                                    <SelectItem value="date_asc">{t.dateOldest}</SelectItem>
+                                    <SelectItem value="alpha_asc">{t.alphabeticalAZ}</SelectItem>
+                                    <SelectItem value="alpha_desc">{t.alphabeticalZA}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         {isSelectionMode ? (
                             <>
-                                <Button variant="outline" onClick={toggleSelectionMode}>Cancel</Button>
+                                <Button variant="outline" onClick={toggleSelectionMode}>{t.cancel}</Button>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" disabled={selectedWords.length === 0}>
                                             <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete ({selectedWords.length})
+                                            {t.deleteSelected(selectedWords.length)}
                                         </Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will permanently delete {selectedWords.length} selected word(s) from this list.
+                                           {t.deleteConfirmDesc(selectedWords.length)}
                                         </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleBulkDelete}>Confirm Delete</AlertDialogAction>
+                                        <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkDelete}>{t.confirmDelete}</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -199,7 +285,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                         ) : (
                             <Button variant="outline" onClick={toggleSelectionMode} disabled={words.length === 0}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit List
+                                {t.editList}
                             </Button>
                         )}
                     </div>
@@ -219,20 +305,20 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                     />
                                 </TableHead>
                             )}
-                            <TableHead className="w-[20%]">Word</TableHead>
-                            <TableHead className="w-[25%]">Meaning</TableHead>
-                            <TableHead className="w-[55%]">Example Sentence</TableHead>
+                            <TableHead className="w-[20%]">{t.wordHeader}</TableHead>
+                            <TableHead className="w-[25%]">{t.meaningHeader}</TableHead>
+                            <TableHead className="w-[55%]">{t.exampleHeader}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {words.length === 0 ? (
+                        {sortedWords.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={isSelectionMode ? 4 : 3} className="h-24 text-center">
-                                    No words in this list yet. Click "Add Word" or "Bulk Add" to get started.
+                                    {t.noWords}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            words.map((word) => (
+                            sortedWords.map((word) => (
                                 <TableRow key={word.id} data-state={selectedWords.includes(word.id) && "selected"}>
                                     {isSelectionMode && (
                                         <TableCell>
