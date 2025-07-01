@@ -251,7 +251,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
 
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-1">
-              <Label htmlFor="meaning" className="font-semibold">{t.meaningLabel} ({targetLanguage})</Label>
+              <Label htmlFor="meaning" className="font-semibold">{t.meaningLabel}</Label>
               <AiButton action="translate" disabled={isTranslating} />
             </div>
             <Input id="meaning" {...register('meaning')} placeholder={t.meaningPlaceholder} className="mt-0" />

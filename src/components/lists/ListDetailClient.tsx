@@ -335,7 +335,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                         </TableCell>
                                     )}
                                     <TableCell className="font-medium">{word.word}</TableCell>
-                                    <TableCell className="text-muted-foreground">{word.meaning} <span className="text-xs text-muted-foreground/50">({word.language})</span></TableCell>
+                                    <TableCell className="text-muted-foreground">{word.meaning}</TableCell>
                                     <TableCell className="text-muted-foreground">{word.example}</TableCell>
                                     <TableCell className="text-right">
                                         <Button 

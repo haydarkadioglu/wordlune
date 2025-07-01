@@ -138,7 +138,7 @@ export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordT
           </div>
 
           <div>
-            <Label htmlFor="meaning">{t.meaningLabel} ({wordToEdit.language})</Label>
+            <Label htmlFor="meaning">{t.meaningLabel}</Label>
             <Input id="meaning" {...form.register('meaning')} />
             {form.formState.errors.meaning && (
             <p className="text-sm text-destructive mt-1">{form.formState.errors.meaning.message}</p>
