@@ -133,6 +133,18 @@ export async function addWordToList(
     });
 }
 
+export async function updateWordInList(
+    userId: string, 
+    listId: string, 
+    wordId: string, 
+    wordData: { word: string; meaning: string; example: string; }
+): Promise<void> {
+    if (!userId || !listId || !wordId || !db) throw new Error("Authentication or database error.");
+
+    const wordDocRef = doc(db, 'data', userId, 'lists', listId, 'words', wordId);
+    await updateDoc(wordDocRef, wordData);
+}
+
 export async function deleteWordFromList(
     userId: string, 
     listId: string, 

@@ -18,6 +18,7 @@ import BulkAddToListDialog from "./BulkAddToList";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSettings } from "@/hooks/useSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import EditListWordDialog from "./EditListWordDialog";
 
 interface ListDetailClientProps {
     listId: string;
@@ -47,6 +48,7 @@ const translations = {
     dateOldest: 'Date (Oldest)',
     alphabeticalAZ: 'Alphabetical (A-Z)',
     alphabeticalZA: 'Alphabetical (Z-A)',
+    editWordAction: 'Edit Word',
   },
   tr: {
     back: 'Listelere Geri Dön',
@@ -71,6 +73,7 @@ const translations = {
     dateOldest: 'Tarih (Eskiden Yeniye)',
     alphabeticalAZ: 'Alfabetik (A-Z)',
     alphabeticalZA: 'Alfabetik (Z-A)',
+    editWordAction: 'Kelimeyi Düzenle',
   }
 };
 
@@ -85,6 +88,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAddWordDialogOpen, setIsAddWordDialogOpen] = useState(false);
     const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
+    const [wordToEdit, setWordToEdit] = useState<ListWord | null>(null);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
     const [sortOption, setSortOption] = useState<SortOption>('date_desc');
@@ -307,19 +311,20 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                             )}
                             <TableHead className="w-[20%]">{t.wordHeader}</TableHead>
                             <TableHead className="w-[25%]">{t.meaningHeader}</TableHead>
-                            <TableHead className="w-[55%]">{t.exampleHeader}</TableHead>
+                            <TableHead className="w-[50%]">{t.exampleHeader}</TableHead>
+                            <TableHead className="w-[5%]"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {sortedWords.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={isSelectionMode ? 4 : 3} className="h-24 text-center">
+                                <TableCell colSpan={isSelectionMode ? 5 : 4} className="h-24 text-center">
                                     {t.noWords}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             sortedWords.map((word) => (
-                                <TableRow key={word.id} data-state={selectedWords.includes(word.id) && "selected"}>
+                                <TableRow key={word.id} data-state={selectedWords.includes(word.id) && "selected"} className="group">
                                     {isSelectionMode && (
                                         <TableCell>
                                             <Checkbox
@@ -332,6 +337,17 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                                     <TableCell className="font-medium">{word.word}</TableCell>
                                     <TableCell className="text-muted-foreground">{word.meaning} <span className="text-xs text-muted-foreground/50">({word.language})</span></TableCell>
                                     <TableCell className="text-muted-foreground">{word.example}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon"
+                                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => setWordToEdit(word)}
+                                            aria-label={t.editWordAction}
+                                        >
+                                            <Edit className="h-4 w-4"/>
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         )}
@@ -348,6 +364,12 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 isOpen={isBulkAddDialogOpen}
                 onOpenChange={setIsBulkAddDialogOpen}
                 listId={listId}
+            />
+            <EditListWordDialog
+                isOpen={!!wordToEdit}
+                onOpenChange={(open) => !open && setWordToEdit(null)}
+                listId={listId}
+                wordToEdit={wordToEdit}
             />
         </div>
     );
