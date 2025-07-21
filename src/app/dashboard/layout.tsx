@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Image 
           src="/auth-background.png" 
           alt="Abstract background of letters" 
-          layout="fill" 
-          objectFit="cover"
+          fill={true}
+          style={{objectFit: 'cover'}}
         />
       </div>
 
@@ -71,4 +71,3 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
     </div>
   );
-}

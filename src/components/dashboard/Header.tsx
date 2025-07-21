@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
+import { LogOut, Sun, Moon, Cog, Languages, ShieldCheck } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { isAdmin as checkIsAdmin } from '@/lib/admin-service';
 
 const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = pathname.startsWith(href);
   return (
     <Link href={href} className={cn(
       buttonVariants({ variant: 'ghost' }),
@@ -29,6 +30,7 @@ export default function Header() {
   const { user, signOut } = useAuth();
   const { uiLanguage, setUiLanguage } = useSettings();
   const [theme, setTheme] = useState('light');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Client-side only effect
@@ -55,6 +57,14 @@ export default function Header() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    if (user) {
+      checkIsAdmin(user).then(setIsAdmin);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
@@ -68,6 +78,7 @@ export default function Header() {
             <NavLink href="/dashboard">Dashboard</NavLink>
             <NavLink href="/dashboard/words">All Words</NavLink>
             <NavLink href="/dashboard/lists">My Lists</NavLink>
+            <NavLink href="/dashboard/stories">Stories</NavLink>
           </nav>
         </div>
 
@@ -91,6 +102,12 @@ export default function Header() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {isAdmin && (
+             <Link href="/admin" aria-label="Admin Panel" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-accent hover:text-accent/80')}>
+                <ShieldCheck className="h-5 w-5" />
+            </Link>
+          )}
 
           <Link href="/dashboard/settings" aria-label="Settings" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-primary')}>
               <Cog className="h-5 w-5" />

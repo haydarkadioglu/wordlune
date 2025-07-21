@@ -1,3 +1,4 @@
+
 import type { User as FirebaseUser } from "firebase/auth";
 
 export type AppUser = FirebaseUser & {
@@ -39,4 +40,14 @@ export interface ListWord {
   example: string;
   language: string;
   createdAt: number; // timestamp
+}
+
+// --- Types for Stories Feature ---
+
+export interface Story {
+    id: string;
+    title: string;
+    content: string;
+    level: 'Beginner' | 'Intermediate' | 'Advanced';
+    createdAt: number; // timestamp
 }
