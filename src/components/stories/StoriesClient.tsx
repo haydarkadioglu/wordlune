@@ -42,9 +42,12 @@ export default function StoriesClient() {
     }, []);
 
     const levelColors: Record<Story['level'], string> = {
-        'Beginner': 'bg-green-500 hover:bg-green-600',
-        'Intermediate': 'bg-sky-500 hover:bg-sky-600',
-        'Advanced': 'bg-red-500 hover:bg-red-600',
+        'A1': 'bg-green-500 hover:bg-green-600',
+        'A2': 'bg-green-600 hover:bg-green-700',
+        'B1': 'bg-sky-500 hover:bg-sky-600',
+        'B2': 'bg-sky-600 hover:bg-sky-700',
+        'C1': 'bg-red-500 hover:bg-red-600',
+        'C2': 'bg-red-600 hover:bg-red-700',
     };
 
     if (isLoading) {
@@ -94,8 +97,9 @@ export default function StoriesClient() {
                         <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle>{story.title}</CardTitle>
-                                <CardDescription>
+                                <CardDescription className="flex gap-2 flex-wrap">
                                     <Badge className={levelColors[story.level]}>{story.level}</Badge>
+                                    <Badge variant="outline">{story.category}</Badge>
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">

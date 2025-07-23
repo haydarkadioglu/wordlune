@@ -27,19 +27,31 @@ export default function AdminClient() {
     const { toast } = useToast();
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        
+        console.log("AdminClient useEffect:", { authLoading, user: user?.email });
+        
         if (!authLoading) {
             if (!user) {
+                console.log("No user found, redirecting to login");
                 router.replace('/login');
             } else {
+                console.log("User found, checking admin status for:", user.email);
                 checkIsAdmin(user).then(adminStatus => {
+                    console.log("Admin check result:", adminStatus);
                     setIsAdmin(adminStatus);
                     if (adminStatus) {
-                        const unsubscribe = getStories(setStories);
-                        return () => unsubscribe();
+                        unsubscribe = getStories(setStories);
                     }
                 }).finally(() => setLoading(false));
             }
         }
+        
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
     }, [user, authLoading, router]);
 
     const handleNewStory = () => {
@@ -107,23 +119,27 @@ export default function AdminClient() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[40%]">Title</TableHead>
-                                <TableHead className="w-[20%]">Level</TableHead>
+                                <TableHead className="w-[30%]">Title</TableHead>
+                                <TableHead className="w-[15%]">Level</TableHead>
+                                <TableHead className="w-[20%]">Category</TableHead>
                                 <TableHead className="w-[20%]">Created At</TableHead>
-                                <TableHead className="text-right w-[20%]">Actions</TableHead>
+                                <TableHead className="text-right w-[15%]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {stories.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">No stories found.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">No stories found.</TableCell>
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
                                     <TableRow key={story.id}>
                                         <TableCell className="font-medium">{story.title}</TableCell>
                                         <TableCell>{story.level}</TableCell>
-                                        <TableCell>{format(story.createdAt, 'PPpp')}</TableCell>
+                                        <TableCell>{story.category}</TableCell>
+                                        <TableCell>
+                                            {story.createdAt ? format(new Date(story.createdAt), 'PPpp') : 'Unknown'}
+                                        </TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>
                                                 <Edit className="h-4 w-4" />

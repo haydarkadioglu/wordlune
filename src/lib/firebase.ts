@@ -34,6 +34,8 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
       analytics = getAnalytics(app);
     }
+    
+    console.log("Firebase initialized successfully");
   } catch (error) {
     console.error("FIREBASE INITIALIZATION FAILED:", error);
     // Let the user know something is wrong, but don't crash
@@ -47,7 +49,16 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     // This is not an error, but a warning for the developer.
     // The user might not have set up their .env file yet.
     console.warn("Firebase credentials are not fully set in .env file. Firebase features will be disabled.");
+    console.warn("Missing:", {
+      apiKey: !firebaseConfig.apiKey,
+      projectId: !firebaseConfig.projectId,
+      authDomain: !firebaseConfig.authDomain,
+    });
 }
 
+// Utility function to check if Firebase is properly initialized
+export const isFirebaseReady = (): boolean => {
+  return !!(app && auth && db);
+};
 
-export { app, auth, googleProvider, analytics, db };
+export { app, auth, googleProvider, db, analytics };

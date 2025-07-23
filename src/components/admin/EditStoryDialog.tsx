@@ -18,7 +18,8 @@ import { Loader2 } from 'lucide-react';
 
 const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
-  level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
+  category: z.enum(['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror']),
   content: z.string().min(20, "Story content must be at least 20 characters."),
 });
 
@@ -30,7 +31,8 @@ interface EditStoryDialogProps {
   story: Story | null;
 }
 
-const levels: Story['level'][] = ['Beginner', 'Intermediate', 'Advanced'];
+const levels: Story['level'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const categories: Story['category'][] = ['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror'];
 
 export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditStoryDialogProps) {
   const { toast } = useToast();
@@ -41,24 +43,29 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     resolver: zodResolver(storySchema),
     defaultValues: {
       title: "",
-      level: "Beginner",
+      level: "A1",
+      category: "Adventure",
       content: "",
     },
   });
 
   useEffect(() => {
-    if (story) {
-      form.reset({
-        title: story.title,
-        level: story.level,
-        content: story.content,
-      });
-    } else {
-      form.reset({
-        title: "",
-        level: "Beginner",
-        content: "",
-      });
+    if (isOpen) {
+      if (story) {
+        form.reset({
+          title: story.title,
+          level: story.level,
+          category: story.category,
+          content: story.content,
+        });
+      } else {
+        form.reset({
+          title: "",
+          level: "A1",
+          category: "Adventure",
+          content: "",
+        });
+      }
     }
   }, [story, form, isOpen]);
 
@@ -70,6 +77,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
             title: isEditing ? "Story Updated!" : "Story Created!",
             description: `The story "${values.title}" has been saved.`,
         });
+        form.reset(); // Reset form after successful save
         onOpenChange(false);
     } catch (error) {
         console.error("Failed to save story:", error);
@@ -79,8 +87,15 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     }
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      form.reset(); // Reset form when dialog closes
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Story' : 'Create New Story'}</DialogTitle>
@@ -99,7 +114,10 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
 
            <div>
             <Label htmlFor="level">Level</Label>
-            <Select onValueChange={(value) => form.setValue('level', value as Story['level'])} defaultValue={form.getValues('level')}>
+            <Select 
+              onValueChange={(value) => form.setValue('level', value as Story['level'])} 
+              value={form.watch('level')}
+            >
                 <SelectTrigger id="level">
                     <SelectValue placeholder="Select level" />
                 </SelectTrigger>
@@ -111,6 +129,26 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
             </Select>
              {form.formState.errors.level && (
               <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select 
+              onValueChange={(value) => form.setValue('category', value as Story['category'])} 
+              value={form.watch('category')}
+            >
+                <SelectTrigger id="category">
+                    <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+             {form.formState.errors.category && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
             )}
           </div>
 

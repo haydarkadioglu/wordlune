@@ -11,7 +11,7 @@ import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseReady } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 
@@ -81,31 +81,8 @@ const translations = {
 
 const Header = () => {
   const { user, loading } = useAuth();
-  const { uiLanguage, setUiLanguage } = useSettings();
+  const { uiLanguage, setUiLanguage, theme, toggleTheme } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
-  const [theme, setTheme] = useState('light');
-
-   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (storedTheme) setTheme(storedTheme);
-    else if (systemPrefersDark) setTheme('dark');
-    else setTheme('light');
-  }, []);
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
 
   return (
     <header className="py-4 px-4 sm:px-6 lg:px-8 bg-transparent absolute top-0 left-0 right-0 z-20">
@@ -160,9 +137,12 @@ export default function LandingPage() {
 
   useEffect(() => {
     const fetchAndroidLink = async () => {
-      if (!db) return;
+      if (!isFirebaseReady()) {
+        console.warn("Firebase not ready, skipping Android app link fetch");
+        return;
+      }
       try {
-        const docRef = doc(db, "versions", "android-app-link");
+        const docRef = doc(db!, "versions", "android-app-link");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists() && docSnap.data().link) {
           setAndroidAppUrl(docSnap.data().link);
@@ -171,11 +151,15 @@ export default function LandingPage() {
         }
       } catch (error) {
         console.error("Error fetching Android app link:", error);
+        // Don't throw the error, just log it and continue without the Android link
       }
     };
 
-    fetchAndroidLink();
-  }, []);
+    // Only attempt to fetch if we're not loading and Firebase is ready
+    if (!loading && isFirebaseReady()) {
+      fetchAndroidLink();
+    }
+  }, [loading]);
 
   if (loading) {
     return (

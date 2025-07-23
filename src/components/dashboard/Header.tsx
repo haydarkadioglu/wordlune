@@ -28,34 +28,8 @@ const NavLink = ({ href, children }: { href: string; children: React.ReactNode }
 
 export default function Header() {
   const { user, signOut } = useAuth();
-  const { uiLanguage, setUiLanguage } = useSettings();
-  const [theme, setTheme] = useState('light');
+  const { uiLanguage, setUiLanguage, theme, toggleTheme } = useSettings();
   const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    // Client-side only effect
-    const storedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else if (systemPrefersDark) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
-    }
-  }, []);
-
-  useEffect(() => {
-    // Client-side only effect
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [theme]);
 
   useEffect(() => {
     if (user) {
@@ -64,10 +38,6 @@ export default function Header() {
       setIsAdmin(false);
     }
   }, [user]);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
 
   return (
     <header className="bg-card/80 backdrop-blur-sm shadow-md sticky top-0 z-40 border-b">

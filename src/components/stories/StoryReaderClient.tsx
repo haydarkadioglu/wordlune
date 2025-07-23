@@ -5,12 +5,16 @@ import { useState, useEffect } from "react";
 import type { Story } from "@/types";
 import { getStoryById } from "@/lib/stories-service";
 import { getStoryWordTranslation } from "@/ai/flows/translate-word-flow";
+import { addWordToStoriesList } from "@/lib/list-service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useSettings } from "@/hooks/useSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface StoryReaderClientProps {
     storyId: string;
@@ -19,7 +23,10 @@ interface StoryReaderClientProps {
 const Word = ({ children }: { children: string }) => {
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
     const { sourceLanguage, targetLanguage } = useSettings();
+    const { user } = useAuth();
+    const { toast } = useToast();
 
     const handleWordClick = async () => {
         if (translation) return; // Don't fetch again if already translated
@@ -38,6 +45,28 @@ const Word = ({ children }: { children: string }) => {
             setIsLoading(false);
         }
     };
+
+    const handleAddToList = async () => {
+        if (!user || !translation) return;
+        
+        setIsAdding(true);
+        try {
+            await addWordToStoriesList(user.uid, children, translation);
+            toast({
+                title: "Kelime Eklendi!",
+                description: `"${children}" kelimesi Stories listesine eklendi.`,
+            });
+        } catch (error) {
+            console.error("Failed to add word to list:", error);
+            toast({
+                title: "Hata",
+                description: "Kelime eklenirken bir hata oluştu.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsAdding(false);
+        }
+    };
     
     return (
         <Popover>
@@ -49,8 +78,36 @@ const Word = ({ children }: { children: string }) => {
                     {children}
                 </span>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-2">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <p className="text-sm font-semibold text-primary">{translation}</p>}
+            <PopoverContent className="w-64 p-4 shadow-lg">
+                {isLoading ? (
+                    <div className="flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <span className="text-sm text-muted-foreground">Çevriliyor...</span>
+                    </div>
+                ) : translation ? (
+                    <div className="space-y-3">
+                        <div className="text-center">
+                            <p className="text-lg font-semibold text-primary leading-relaxed">{translation}</p>
+                        </div>
+                        {user && (
+                            <div className="flex justify-center pt-2 border-t">
+                                <Button 
+                                    onClick={handleAddToList}
+                                    disabled={isAdding}
+                                    size="sm"
+                                    className="bg-primary hover:bg-primary/90 text-white"
+                                >
+                                    {isAdding ? (
+                                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                    ) : (
+                                        <Plus className="h-4 w-4 mr-1" />
+                                    )}
+                                    Stories'e Ekle
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
             </PopoverContent>
         </Popover>
     )
@@ -124,7 +181,10 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
             </Button>
             <div className="bg-card p-6 sm:p-8 lg:p-10 rounded-lg shadow-lg border">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary mb-2">{story.title}</h1>
-                <p className="text-muted-foreground text-lg mb-8">{story.level}</p>
+                <div className="flex gap-2 mb-8">
+                    <Badge variant="secondary">{story.level}</Badge>
+                    <Badge variant="outline">{story.category}</Badge>
+                </div>
                 <div className="prose prose-lg dark:prose-invert max-w-none text-foreground text-xl leading-relaxed">
                     {renderStoryContent()}
                 </div>
