@@ -7,7 +7,6 @@
   },
   "hosting": {
     "source": ".",
-    "use": "nodejs18",
     "ignore": [
       "firebase.json",
       "**/.*",
