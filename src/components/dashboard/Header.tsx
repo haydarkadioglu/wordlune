@@ -30,33 +30,39 @@ export default function Header() {
   const { uiLanguage, setUiLanguage } = useSettings();
   const [theme, setTheme] = useState('light');
 
+  // Effect to set the initial theme based on system preference
   useEffect(() => {
-    // Client-side only effect
-    const storedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else if (systemPrefersDark) {
-      setTheme('dark');
+    // Check for existing consent. If not granted, we can't check localStorage.
+    const consent = localStorage.getItem('wordlune_cookie_consent');
+    let initialTheme = 'light';
+
+    if (consent === 'granted') {
+      const storedTheme = localStorage.getItem('theme');
+      if (storedTheme) {
+        initialTheme = storedTheme;
+      } else {
+        initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
     } else {
-      setTheme('light');
+      // If no consent, default to system preference without storing it
+       initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
+
+    setTheme(initialTheme);
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
-  useEffect(() => {
-    // Client-side only effect
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    
+    // Only save to localStorage if consent has been given
+    const consent = localStorage.getItem('wordlune_cookie_consent');
+    if (consent === 'granted') {
+        localStorage.setItem('theme', newTheme);
+    }
   };
 
   return (

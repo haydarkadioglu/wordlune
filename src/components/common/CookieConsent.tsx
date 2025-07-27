@@ -38,8 +38,16 @@ export default function CookieConsent() {
         } else if (consent === 'granted') {
             // Consent already given
             initializeAnalytics();
+             // Apply theme from localStorage if consent was granted
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+            } else {
+                 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                 document.documentElement.classList.toggle('dark', systemPrefersDark);
+            }
         }
-        // If 'denied', do nothing
+        // If 'denied', do nothing extra. The default theme (light) will be used.
     }, []);
 
     const handleConsent = (consent: 'granted' | 'denied') => {
@@ -47,6 +55,12 @@ export default function CookieConsent() {
         setIsVisible(false);
         if (consent === 'granted') {
             initializeAnalytics();
+            // Also save the current theme to localStorage
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            localStorage.setItem('theme', currentTheme);
+        } else {
+            // If denied, remove theme preference
+            localStorage.removeItem('theme');
         }
     };
 

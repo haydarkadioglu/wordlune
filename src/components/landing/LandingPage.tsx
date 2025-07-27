@@ -85,26 +85,37 @@ const Header = () => {
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   const [theme, setTheme] = useState('light');
 
-   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (storedTheme) setTheme(storedTheme);
-    else if (systemPrefersDark) setTheme('dark');
-    else setTheme('light');
+  // Effect to set the initial theme based on system preference or saved preference
+  useEffect(() => {
+    const consent = localStorage.getItem('wordlune_cookie_consent');
+    let initialTheme = 'light';
+    
+    if (consent === 'granted') {
+      const storedTheme = localStorage.getItem('theme');
+      if (storedTheme) {
+        initialTheme = storedTheme;
+      } else {
+         initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    } else {
+       initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    setTheme(initialTheme);
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    
+    // Only save to localStorage if consent has been given
+    const consent = localStorage.getItem('wordlune_cookie_consent');
+    if (consent === 'granted') {
+        localStorage.setItem('theme', newTheme);
+    }
   };
 
   return (
