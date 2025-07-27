@@ -14,7 +14,7 @@ import { doc, getDoc } from 'firebase/firestore';
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [sourceLanguage, setSourceLanguageState] = useState<string>('English');
   const [targetLanguage, setTargetLanguageState] = useState<string>('Turkish');
-  const [uiLanguage, setUiLanguageState] = useState<string>('tr');
+  const [uiLanguage, setUiLanguageState] = useState<string>('en');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setUiLanguageState(savedUiLang);
         document.documentElement.lang = savedUiLang;
     } else {
-        document.documentElement.lang = 'tr';
+        document.documentElement.lang = 'en';
     }
     setIsLoaded(true);
   }, []);
