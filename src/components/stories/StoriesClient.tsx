@@ -55,8 +55,8 @@ export default function StoriesClient() {
         return () => unsubscribe();
     }, []);
     
-    const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level))], [stories]);
-    const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category))], [stories]);
+    const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level).filter(Boolean))], [stories]);
+    const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category).filter(Boolean))], [stories]);
 
     const filteredStories = useMemo(() => {
         return stories.filter(story => {
