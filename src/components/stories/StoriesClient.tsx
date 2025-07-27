@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Story } from "@/types";
 import { getStories } from "@/lib/stories-service";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -11,27 +11,34 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { useSettings } from "@/hooks/useSettings";
+import { cn } from "@/lib/utils";
 
 const translations = {
   en: {
     title: 'Stories',
     description: 'Improve your vocabulary by reading stories. Click on words to get instant translations.',
     readStory: 'Read Story',
-    noStories: 'No stories available yet. Please check back later.',
+    noStories: 'No stories available for the selected level. Please check back later.',
+    all: 'All',
   },
   tr: {
     title: 'Hikayeler',
     description: 'Hikayeler okuyarak kelime dağarcığınızı geliştirin. Anında çeviriler için kelimelere tıklayın.',
     readStory: 'Hikayeyi Oku',
-    noStories: 'Henüz hiç hikaye mevcut değil. Lütfen daha sonra tekrar kontrol edin.',
+    noStories: 'Seçilen seviye için henüz hikaye mevcut değil. Lütfen daha sonra tekrar kontrol edin.',
+    all: 'Tümü',
   }
 };
+
+type StoryLevelFilter = Story['level'] | 'All';
+const storyLevels: StoryLevelFilter[] = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
 export default function StoriesClient() {
     const [stories, setStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { uiLanguage } = useSettings();
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+    const [activeFilter, setActiveFilter] = useState<StoryLevelFilter>('All');
 
     useEffect(() => {
         const unsubscribe = getStories((fetchedStories) => {
@@ -40,6 +47,13 @@ export default function StoriesClient() {
         });
         return () => unsubscribe();
     }, []);
+
+    const filteredStories = useMemo(() => {
+        if (activeFilter === 'All') {
+            return stories;
+        }
+        return stories.filter(story => story.level === activeFilter);
+    }, [stories, activeFilter]);
 
     const levelColors: Record<Story['level'], string> = {
         'Beginner': 'bg-green-500 hover:bg-green-600',
@@ -52,6 +66,14 @@ export default function StoriesClient() {
             <div className="space-y-6">
                  <div className="flex justify-between items-center">
                     <Skeleton className="h-10 w-48" />
+                </div>
+                <div className="space-y-2">
+                    <div className="flex gap-2">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-8 w-28" />
+                        <Skeleton className="h-8 w-24" />
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[...Array(3)].map((_, i) => (
@@ -84,13 +106,25 @@ export default function StoriesClient() {
                 </div>
             </div>
 
-            {stories.length === 0 ? (
+             <div className="flex flex-wrap gap-2">
+                {storyLevels.map(level => (
+                    <Button
+                        key={level}
+                        variant={activeFilter === level ? 'default' : 'outline'}
+                        onClick={() => setActiveFilter(level)}
+                    >
+                        {level === 'All' ? t.all : level}
+                    </Button>
+                ))}
+            </div>
+
+            {filteredStories.length === 0 ? (
                 <div className="text-center py-20 border-2 border-dashed rounded-lg">
                     <h3 className="text-xl font-semibold">{t.noStories}</h3>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {stories.map((story) => (
+                    {filteredStories.map((story) => (
                         <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle>{story.title}</CardTitle>

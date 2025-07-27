@@ -5,30 +5,43 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, Sun, Moon, Cog, Languages } from 'lucide-react';
+import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, List } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
 
-const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+const NavLink = ({ href, children, onLinkClick }: { href: string; children: React.ReactNode, onLinkClick?: () => void }) => {
   const pathname = usePathname();
   const isActive = pathname.startsWith(href);
   return (
-    <Link href={href} className={cn(
-      buttonVariants({ variant: 'ghost' }),
-      "text-muted-foreground hover:text-primary",
-      isActive && "text-primary bg-primary/10"
-    )}>
+    <Link 
+      href={href} 
+      className={cn(
+        buttonVariants({ variant: 'ghost' }),
+        "text-muted-foreground hover:text-primary justify-start",
+        isActive && "text-primary bg-primary/10"
+      )}
+      onClick={onLinkClick}
+    >
       {children}
     </Link>
   );
 };
 
+const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/words", label: "All Words", icon: <List className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/lists", label: "My Lists", icon: <List className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/stories", label: "Stories", icon: <BookOpen className="mr-2 h-4 w-4" /> },
+];
+
 export default function Header() {
   const { user, signOut } = useAuth();
   const { uiLanguage, setUiLanguage } = useSettings();
   const [theme, setTheme] = useState('light');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Effect to set the initial theme based on system preference
   useEffect(() => {
@@ -64,20 +77,54 @@ export default function Header() {
         localStorage.setItem('theme', newTheme);
     }
   };
+  
+  const handleLinkClick = () => {
+    setIsMobileMenuOpen(false);
+  }
 
   return (
     <header className="bg-card/80 backdrop-blur-sm shadow-md sticky top-0 z-40 border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-full max-w-xs p-4">
+               <div className="mb-6">
+                <Logo />
+               </div>
+               <nav className="flex flex-col gap-2">
+                 {navItems.map(item => (
+                    <NavLink key={item.href} href={item.href} onLinkClick={handleLinkClick}>
+                        {item.icon} {item.label}
+                    </NavLink>
+                 ))}
+               </nav>
+            </SheetContent>
+          </Sheet>
           <Logo />
-          <nav className="hidden md:flex items-center gap-2">
-            <NavLink href="/dashboard">Dashboard</NavLink>
-            <NavLink href="/dashboard/words">All Words</NavLink>
-            <NavLink href="/dashboard/lists">My Lists</NavLink>
+          <nav className="hidden md:flex items-center gap-1">
+             {navItems.map(item => (
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  className={cn(
+                    buttonVariants({ variant: 'ghost' }),
+                    "text-muted-foreground hover:text-primary",
+                    usePathname().startsWith(item.href) && "text-primary bg-primary/10"
+                  )}
+                >
+                  {item.label}
+                </Link>
+             ))}
           </nav>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
            {user && (
             <p className="text-sm text-foreground hidden lg:block mr-4">
               Welcome, <span className="font-semibold text-primary">{user.username}</span>
