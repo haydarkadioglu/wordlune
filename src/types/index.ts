@@ -41,13 +41,3 @@ export interface ListWord {
   language: string;
   createdAt: number; // timestamp
 }
-
-// --- Types for Stories Feature ---
-
-export interface Story {
-    id: string;
-    title: string;
-    content: string;
-    level: 'Beginner' | 'Intermediate' | 'Advanced';
-    createdAt: number; // timestamp
-}
