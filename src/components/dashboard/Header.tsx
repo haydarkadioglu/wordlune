@@ -9,7 +9,7 @@ import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, Lis
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
 
 const NavLink = ({ href, children, onLinkClick }: { href: string; children: React.ReactNode, onLinkClick?: () => void }) => {
@@ -94,9 +94,10 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-full max-w-xs p-4">
-               <div className="mb-6">
-                <Logo />
-               </div>
+               <SheetHeader className="mb-6 text-left">
+                  <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                  <Logo />
+               </SheetHeader>
                <nav className="flex flex-col gap-2">
                  {navItems.map(item => (
                     <NavLink key={item.href} href={item.href} onLinkClick={handleLinkClick}>
