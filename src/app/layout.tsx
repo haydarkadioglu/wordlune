@@ -4,6 +4,7 @@ import './globals.css';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from "@/components/ui/toaster";
 import PageTransitionWrapper from '@/components/common/PageTransitionWrapper';
+import CookieConsent from '@/components/common/CookieConsent';
 
 export const metadata: Metadata = {
   title: 'WordLune - Master Your Vocabulary',
@@ -43,6 +44,7 @@ export default function RootLayout({
             {children}
           </PageTransitionWrapper>
           <Toaster />
+          <CookieConsent />
         </AuthProvider>
       </body>
     </html>

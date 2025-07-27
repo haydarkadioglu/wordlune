@@ -2,7 +2,7 @@
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getAnalytics, type Analytics } from 'firebase/analytics';
+import { getAnalytics, type Analytics, isSupported } from 'firebase/analytics';
 
 // Web uygulamanızın Firebase yapılandırması
 // Ortam değişkenlerinden (environment variables) okunuyor
@@ -21,7 +21,7 @@ let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 let db: Firestore | null = null;
 let analytics: Analytics | undefined;
-
+let analyticsInitialized = false;
 
 // Only initialize if the API key and Project ID are provided, to prevent crashes.
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
@@ -31,9 +31,7 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     googleProvider = new GoogleAuthProvider();
     db = getFirestore(app);
 
-    if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
-      analytics = getAnalytics(app);
-    }
+    // Analytics will be initialized separately after user consent.
   } catch (error) {
     console.error("FIREBASE INITIALIZATION FAILED:", error);
     // Let the user know something is wrong, but don't crash
@@ -49,5 +47,20 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     console.warn("Firebase credentials are not fully set in .env file. Firebase features will be disabled.");
 }
 
+/**
+ * Initializes Firebase Analytics only if it's supported and hasn't been initialized yet.
+ * This function should be called after obtaining user consent.
+ */
+export async function initializeAnalytics() {
+  if (app && !analyticsInitialized && (await isSupported())) {
+    try {
+      analytics = getAnalytics(app);
+      analyticsInitialized = true;
+      console.log("Firebase Analytics initialized.");
+    } catch (error) {
+       console.error("Error initializing Firebase Analytics:", error);
+    }
+  }
+}
 
 export { app, auth, googleProvider, analytics, db };
