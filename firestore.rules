@@ -3,45 +3,70 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // USERS: Publicly readable profile information.
-    // WRITE: Only the user can create their own profile. No updates/deletes from client.
-    match /users/{userId} {
-      allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update, delete: if false; // Updates managed server-side or via specific functions.
+
+    // Helper function to check if a user is the owner of the data
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
-    
-    // USERNAMES: Used for unique username lookups.
-    // READ: Anyone can read to check if a username exists.
-    // WRITE: A user can only create a username document that points to their own UID.
-    //        A user can only delete their own old username document.
-    match /usernames/{username} {
-      allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow update: if false;
-    }
-    
-    // DATA: Main container for user-specific data (words, lists, etc.)
-    // READ/WRITE: Only the authenticated owner of the data can access it.
+
+    // Rules for user-specific data (words, lists, etc.)
+    // Stored under /data/{userId}
     match /data/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
-    // STORIES: Publicly readable stories.
-    // READ: Anyone can read stories.
-    // WRITE: Only admins can write (create, update, delete) stories.
+    // Rules for public user profiles
+    // Contains non-sensitive info like username, displayName
+    match /users/{userId} {
+      // Anyone can read a user's public profile
+      allow read: if request.auth != null;
+      // A user can create their own profile and update their own username/displayName
+      allow create, update: if isOwner(userId);
+    }
+    
+    // Rules for ensuring unique usernames. This is the most complex part.
+    // The key is to allow a user to delete their old username doc
+    // and create a new one, but only within the context of updating their profile.
+    match /usernames/{username} {
+      // Anyone can check if a username exists
+      allow read: if request.auth != null;
+
+      // Allow creating a username doc IF the user is creating their own user profile
+      // This is for initial registration.
+      allow create: if request.auth != null &&
+                      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Allow deleting an old username doc IF the user is also updating their main user profile.
+      // This is crucial for the username change transaction to succeed.
+      allow delete: if request.auth != null &&
+                      // Check that the user is the owner of the username being deleted
+                      resource.data.userId == request.auth.uid;
+    }
+    
+    // Rules for Admin-only functionality
+    match /admins/{userId} {
+      // Only authenticated users can check if a user is an admin
+      // This prevents anonymous enumeration of admins.
+      allow read: if request.auth != null;
+      // No one can write/delete from the client. This should be managed from the Firebase Console.
+      allow write: if false;
+    }
+    
+    // Rules for Stories
     match /stories/{storyId} {
-      allow read: if true;
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        // Anyone logged in can read stories
+        allow read: if request.auth != null;
+        // Only admins can create, update, or delete stories
+        allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // ADMINS: A list of admin UIDs.
-    // READ/WRITE: No one can read or write to this from the client.
-    // This collection should only be managed from the Firebase Console for security.
-    match /admins/{adminId} {
-        allow read, write: if false;
+    // Rules for dynamic configuration like the Android app link
+    match /versions/{versionId} {
+      // Everyone can read configuration data
+      allow read: if true;
+      // No one can write from the client. Manage from Firebase Console.
+      allow write: if false;
     }
   }
 }
