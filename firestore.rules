@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,52 +9,77 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Rules for user-specific data (words, lists, etc.)
-    match /data/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Rules for user profile information
+    // Matches any document in the 'users' collection
     match /users/{userId} {
-      // Users can read their own profile
-      allow get: if request.auth != null && request.auth.uid == userId;
-      // Users can create their profile upon registration
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // Users can update their own username
-      allow update: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Rules for ensuring unique usernames
-    match /usernames/{username} {
-      // Anyone can check if a username exists
-      allow get;
-      // A user can claim a username if they are logged in
-      allow create: if request.auth != null;
-      // A user can only delete their own username document
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Any authenticated user can read a user's public profile (username, displayname)
+      allow read: if request.auth != null;
+      // A user can only create their own user document
+      allow create: if request.auth.uid == userId;
+      // A user can only update their own user document
+      allow update: if request.auth.uid == userId;
+      // Users cannot delete their profiles
+      allow delete: if false;
+
+      // Login history is private and can only be written by the user
+      match /loginHistory/{logId} {
+        allow read, delete: if false; // Nobody can read or delete logs
+        allow create: if request.auth.uid == userId;
+      }
     }
 
-    // Rules for stories, organized by language
-    // Any authenticated user can read stories
-    match /stories/{language}/stories/{storyId} {
-      allow get: if request.auth != null;
-      // Only admins can create, update, or delete stories
-      allow write: if request.auth != null && isAdmin();
+    // Matches any document in the 'usernames' collection
+    // This collection maps a unique username to a userId
+    match /usernames/{username} {
+       // Any authenticated user can check if a username exists
+      allow read: if request.auth != null;
+      // A user can claim a username if it's not taken and they are creating it for themselves
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // No direct updates allowed to a username document
+      allow update: if false;
+      // A user can delete their *own* username mapping (e.g., when changing their username)
+      allow delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Matches the user-specific data container
+    match /data/{userId} {
+      // Allow read/write access only to the user who owns this data
+      allow read, write: if request.auth.uid == userId;
+
+      // This rule will apply to all subcollections within a user's data document
+      // (e.g., 'words', 'lists')
+      match /{subcollection}/{docId=**} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
     
-    // Rules for admin user checks
+    // Matches the language documents in the 'stories' collection
+    match /stories/{language} {
+      // Anyone can read the language document itself (if it contains metadata)
+      allow read: if true;
+      // Only admins can write to the language document
+      allow write: if isAdmin();
+
+      // Matches any story within the subcollection of a language
+      match /stories/{storyId} {
+        // Any user can read stories
+        allow read: if true;
+        // Only admins can create, update, or delete stories
+        allow write: if isAdmin();
+      }
+    }
+    
+    // Matches admin documents. Only admins can read this collection.
+    // This is useful for backend checks, but clients should generally not read it.
     match /admins/{userId} {
-      // Only an admin can check if another user is an admin.
-      // A user can check their own admin status.
-      allow get: if request.auth != null && (isAdmin() || request.auth.uid == userId);
+      allow read, write, create, delete: if false; // Nobody can modify admin list from client
     }
-    
-    // Rules for app version links (e.g., Android app link)
-    // Anyone can read this information
+
+    // Matches version documents
     match /versions/{versionId} {
-        allow get;
-        // Only admins can update version links
-        allow write: if request.auth != null && isAdmin();
+        // Anyone can read version information (like app links)
+        allow read: if true;
+        // Only admins can update version information
+        allow write: if isAdmin();
     }
   }
 }
