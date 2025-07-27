@@ -55,8 +55,8 @@ export default function StoriesClient() {
         return () => unsubscribe();
     }, []);
     
-    const uniqueLevels = useMemo(() => ['all', ...Array.from(new Set(stories.map(s => s.level)))], [stories]);
-    const uniqueCategories = useMemo(() => ['all', ...Array.from(new Set(stories.map(s => s.category)))], [stories]);
+    const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level))], [stories]);
+    const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category))], [stories]);
 
     const filteredStories = useMemo(() => {
         return stories.filter(story => {
@@ -124,7 +124,7 @@ export default function StoriesClient() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">{t.allLevels}</SelectItem>
-                                {uniqueLevels.filter(l => l !== 'all').map(level => (
+                                {uniqueLevels.map(level => (
                                     <SelectItem key={level} value={level}>{level}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -137,7 +137,7 @@ export default function StoriesClient() {
                             </SelectTrigger>
                             <SelectContent>
                                  <SelectItem value="all">{t.allCategories}</SelectItem>
-                                {uniqueCategories.filter(c => c !== 'all').map(category => (
+                                {uniqueCategories.map(category => (
                                     <SelectItem key={category} value={category}>{category}</SelectItem>
                                 ))}
                             </SelectContent>
