@@ -12,48 +12,52 @@ import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { useSettings } from "@/hooks/useSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 
 const translations = {
   en: {
     title: 'Stories',
     description: 'Improve your vocabulary by reading stories. Click on words to get instant translations.',
     readStory: 'Read Story',
-    noStories: 'No stories available for the selected filters. Please check back later or change your filters.',
+    noStories: 'No stories available for the selected language or filters. Please check back later or change your filters.',
     allLevels: 'All Levels',
     allCategories: 'All Categories',
     filterByLevel: 'Filter by level',
     filterByCategory: 'Filter by category',
     clearFilters: 'Clear Filters',
+    loadingStories: 'Loading stories for',
   },
   tr: {
     title: 'Hikayeler',
     description: 'Hikayeler okuyarak kelime dağarcığınızı geliştirin. Anında çeviriler için kelimelere tıklayın.',
     readStory: 'Hikayeyi Oku',
-    noStories: 'Seçilen filtrelere uygun hikaye bulunamadı. Lütfen daha sonra tekrar kontrol edin veya filtrelerinizi değiştirin.',
+    noStories: 'Seçilen dil veya filtrelere uygun hikaye bulunamadı. Lütfen daha sonra tekrar kontrol edin veya filtrelerinizi değiştirin.',
     allLevels: 'Tüm Seviyeler',
     allCategories: 'Tüm Kategoriler',
     filterByLevel: 'Seviyeye göre filtrele',
     filterByCategory: 'Kategoriye göre filtrele',
     clearFilters: 'Filtreleri Temizle',
+    loadingStories: 'Hikayeler yükleniyor:',
   }
 };
 
 export default function StoriesClient() {
     const [stories, setStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const { uiLanguage } = useSettings();
+    const { uiLanguage, sourceLanguage } = useSettings();
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
     
     const [levelFilter, setLevelFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
     useEffect(() => {
-        const unsubscribe = getStories((fetchedStories) => {
+        setIsLoading(true);
+        const unsubscribe = getStories(sourceLanguage, (fetchedStories) => {
             setStories(fetchedStories);
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, []);
+    }, [sourceLanguage]);
     
     const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level).filter(Boolean))], [stories]);
     const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category).filter(Boolean))], [stories]);
@@ -71,31 +75,64 @@ export default function StoriesClient() {
         setCategoryFilter('all');
     }
 
-    if (isLoading) {
+    const renderContent = () => {
+        if (isLoading) {
+             return (
+                <div className="space-y-6">
+                    <Alert>
+                        <Loader2 className="h-4 w-4 animate-spin"/>
+                        <AlertTitle>{t.loadingStories} {sourceLanguage}...</AlertTitle>
+                        <AlertDescription>
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                                {[...Array(3)].map((_, i) => (
+                                    <Card key={i}>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-3/4" />
+                                            <Skeleton className="h-4 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Skeleton className="h-10 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            );
+        }
+
+        if (filteredStories.length === 0) {
+            return (
+                <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                    <h3 className="text-xl font-semibold">{t.noStories}</h3>
+                </div>
+            );
+        }
+
         return (
-            <div className="space-y-6">
-                 <div className="flex justify-between items-center">
-                    <Skeleton className="h-10 w-48" />
-                </div>
-                <div className="space-y-2">
-                    <div className="flex gap-2">
-                        <Skeleton className="h-10 w-40" />
-                        <Skeleton className="h-10 w-40" />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...Array(3)].map((_, i) => (
-                        <Card key={i}>
-                            <CardHeader>
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                            </CardHeader>
-                            <CardContent>
-                                 <Skeleton className="h-10 w-full" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredStories.map((story) => (
+                    <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <CardTitle>{story.title}</CardTitle>
+                            <CardDescription className="flex gap-2 pt-2">
+                                <Badge variant="outline">{story.level}</Badge>
+                                <Badge variant="secondary">{story.category}</Badge>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                           <p className="text-muted-foreground line-clamp-3">{story.content}</p>
+                        </CardContent>
+                        <CardFooter>
+                            <Button asChild className="w-full">
+                                <Link href={`/dashboard/stories/${story.id}?lang=${story.language}`}>
+                                    {t.readStory} <ArrowRight className="ml-2" />
+                                </Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                ))}
             </div>
         );
     }
@@ -118,7 +155,7 @@ export default function StoriesClient() {
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-center">
                     <Filter className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                     <div className="w-full sm:w-48">
-                        <Select value={levelFilter} onValueChange={setLevelFilter}>
+                        <Select value={levelFilter} onValueChange={setLevelFilter} disabled={isLoading}>
                             <SelectTrigger>
                                 <SelectValue placeholder={t.filterByLevel} />
                             </SelectTrigger>
@@ -131,7 +168,7 @@ export default function StoriesClient() {
                         </Select>
                     </div>
                     <div className="w-full sm:w-48">
-                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoading}>
                             <SelectTrigger>
                                 <SelectValue placeholder={t.filterByCategory} />
                             </SelectTrigger>
@@ -152,35 +189,7 @@ export default function StoriesClient() {
                 </CardContent>
             </Card>
 
-            {filteredStories.length === 0 ? (
-                <div className="text-center py-20 border-2 border-dashed rounded-lg">
-                    <h3 className="text-xl font-semibold">{t.noStories}</h3>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredStories.map((story) => (
-                        <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle>{story.title}</CardTitle>
-                                <CardDescription className="flex gap-2 pt-2">
-                                    <Badge variant="outline">{story.level}</Badge>
-                                    <Badge variant="secondary">{story.category}</Badge>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                               <p className="text-muted-foreground line-clamp-3">{story.content}</p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button asChild className="w-full">
-                                    <Link href={`/dashboard/stories/${story.id}`}>
-                                        {t.readStory} <ArrowRight className="ml-2" />
-                                    </Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
-                </div>
-            )}
+            {renderContent()}
         </div>
     );
 }

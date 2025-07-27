@@ -16,6 +16,7 @@ import EditStoryDialog from './EditStoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
+import { useSettings } from '@/hooks/useSettings';
 
 export default function AdminClient() {
     const { user, loading: authLoading } = useAuth();
@@ -26,6 +27,7 @@ export default function AdminClient() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingStory, setEditingStory] = useState<Story | null>(null);
     const { toast } = useToast();
+    const { sourceLanguage } = useSettings(); // To fetch stories for a default language
 
     useEffect(() => {
         if (!authLoading) {
@@ -34,14 +36,18 @@ export default function AdminClient() {
             } else {
                 checkIsAdmin(user).then(adminStatus => {
                     setIsAdmin(adminStatus);
-                    if (adminStatus) {
-                        const unsubscribe = getStories(setStories);
-                        return () => unsubscribe();
-                    }
-                }).finally(() => setLoading(false));
+                    setLoading(false);
+                });
             }
         }
     }, [user, authLoading, router]);
+
+    useEffect(() => {
+        if (isAdmin && sourceLanguage) {
+            const unsubscribe = getStories(sourceLanguage, setStories);
+            return () => unsubscribe();
+        }
+    }, [isAdmin, sourceLanguage]);
 
     const handleNewStory = () => {
         setEditingStory(null);
@@ -53,12 +59,12 @@ export default function AdminClient() {
         setIsDialogOpen(true);
     };
 
-    const handleDeleteStory = async (storyId: string, storyTitle: string) => {
+    const handleDeleteStory = async (story: Story) => {
         try {
-            await deleteStory(storyId);
+            await deleteStory(story.language, story.id);
             toast({
                 title: "Story Deleted",
-                description: `"${storyTitle}" has been successfully deleted.`,
+                description: `"${story.title}" has been successfully deleted.`,
                 variant: 'destructive'
             });
         } catch (error) {
@@ -97,7 +103,7 @@ export default function AdminClient() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <CardTitle className="font-headline text-2xl text-primary flex items-center gap-2"><List /> Story Management</CardTitle>
-                            <CardDescription>Add, edit, or delete stories from the platform.</CardDescription>
+                            <CardDescription>Add, edit, or delete stories from the platform for the <span className="font-bold text-primary">{sourceLanguage}</span> language.</CardDescription>
                         </div>
                         <Button onClick={handleNewStory}>
                             <PlusCircle className="mr-2" /> Add New Story
@@ -118,7 +124,7 @@ export default function AdminClient() {
                         <TableBody>
                             {stories.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">No stories found.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">No stories found for {sourceLanguage}.</TableCell>
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
@@ -146,7 +152,7 @@ export default function AdminClient() {
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteStory(story.id, story.title)}>Delete</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => handleDeleteStory(story)}>Delete</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>

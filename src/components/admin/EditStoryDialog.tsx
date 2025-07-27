@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Story } from '@/types';
@@ -14,9 +14,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 
 const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
+  language: z.string().min(1, "Language is required."),
   level: z.string().min(1, "Level is required (e.g., A1, B2)."),
   category: z.string().min(2, "Category is required (e.g., Fantasy)."),
   content: z.string().min(20, "Story content must be at least 20 characters."),
@@ -39,6 +42,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     resolver: zodResolver(storySchema),
     defaultValues: {
       title: "",
+      language: "English",
       level: "",
       category: "",
       content: "",
@@ -49,6 +53,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     if (story) {
       form.reset({
         title: story.title,
+        language: story.language,
         level: story.level,
         category: story.category,
         content: story.content,
@@ -56,6 +61,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     } else {
       form.reset({
         title: "",
+        language: "English",
         level: "",
         category: "",
         content: "",
@@ -113,6 +119,29 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
                   <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
                 )}
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="language">Language</Label>
+               <Controller
+                name="language"
+                control={form.control}
+                render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue="English">
+                    <SelectTrigger id="language">
+                        <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {SUPPORTED_LANGUAGES.map(lang => (
+                            <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                )}
+                />
+              {form.formState.errors.language && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.language.message}</p>
+              )}
             </div>
 
           <div>

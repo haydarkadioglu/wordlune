@@ -15,6 +15,7 @@ import { Badge } from "../ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { addWordToList, createList, getListDetails } from "@/lib/list-service";
+import { useSearchParams } from "next/navigation";
 
 interface StoryReaderClientProps {
     storyId: string;
@@ -125,17 +126,19 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
 export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
     const [story, setStory] = useState<Story | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const lang = searchParams.get('lang');
 
     useEffect(() => {
-        if (storyId) {
+        if (storyId && lang) {
             setIsLoading(true);
-            getStoryById(storyId).then(fetchedStory => {
+            getStoryById(lang, storyId).then(fetchedStory => {
                 setStory(fetchedStory);
             }).finally(() => {
                 setIsLoading(false);
             });
         }
-    }, [storyId]);
+    }, [storyId, lang]);
 
     const renderStoryContent = () => {
         if (!story?.content) return null;
