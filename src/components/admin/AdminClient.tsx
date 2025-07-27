@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import EditStoryDialog from './EditStoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from '../ui/badge';
 
 export default function AdminClient() {
     const { user, loading: authLoading } = useAuth();
@@ -107,8 +108,9 @@ export default function AdminClient() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[40%]">Title</TableHead>
-                                <TableHead className="w-[20%]">Level</TableHead>
+                                <TableHead className="w-[30%]">Title</TableHead>
+                                <TableHead className="w-[15%]">Level</TableHead>
+                                <TableHead className="w-[15%]">Category</TableHead>
                                 <TableHead className="w-[20%]">Created At</TableHead>
                                 <TableHead className="text-right w-[20%]">Actions</TableHead>
                             </TableRow>
@@ -116,13 +118,14 @@ export default function AdminClient() {
                         <TableBody>
                             {stories.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">No stories found.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">No stories found.</TableCell>
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
                                     <TableRow key={story.id}>
                                         <TableCell className="font-medium">{story.title}</TableCell>
-                                        <TableCell>{story.level}</TableCell>
+                                        <TableCell><Badge variant="outline">{story.level}</Badge></TableCell>
+                                        <TableCell><Badge variant="secondary">{story.category}</Badge></TableCell>
                                         <TableCell>{format(story.createdAt, 'PPpp')}</TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>

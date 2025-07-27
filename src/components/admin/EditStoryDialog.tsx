@@ -12,13 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
-  level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  level: z.string().min(1, "Level is required (e.g., A1, B2)."),
+  category: z.string().min(2, "Category is required (e.g., Fantasy)."),
   content: z.string().min(20, "Story content must be at least 20 characters."),
 });
 
@@ -30,8 +30,6 @@ interface EditStoryDialogProps {
   story: Story | null;
 }
 
-const levels: Story['level'][] = ['Beginner', 'Intermediate', 'Advanced'];
-
 export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditStoryDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +39,8 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     resolver: zodResolver(storySchema),
     defaultValues: {
       title: "",
-      level: "Beginner",
+      level: "",
+      category: "",
       content: "",
     },
   });
@@ -51,12 +50,14 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
       form.reset({
         title: story.title,
         level: story.level,
+        category: story.category,
         content: story.content,
       });
     } else {
       form.reset({
         title: "",
-        level: "Beginner",
+        level: "",
+        category: "",
         content: "",
       });
     }
@@ -96,23 +97,23 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
               <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>
             )}
           </div>
-
-           <div>
-            <Label htmlFor="level">Level</Label>
-            <Select onValueChange={(value) => form.setValue('level', value as Story['level'])} defaultValue={form.getValues('level')}>
-                <SelectTrigger id="level">
-                    <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                    {levels.map(level => (
-                        <SelectItem key={level} value={level}>{level}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-             {form.formState.errors.level && (
-              <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
-            )}
-          </div>
+          
+           <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="level">Level (e.g., A1, B2)</Label>
+                <Input id="level" {...form.register('level')} />
+                {form.formState.errors.level && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="category">Category (e.g., Fantasy)</Label>
+                <Input id="category" {...form.register('category')} />
+                {form.formState.errors.category && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
+                )}
+              </div>
+            </div>
 
           <div>
             <Label htmlFor="content">Content</Label>

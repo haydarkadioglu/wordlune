@@ -41,3 +41,13 @@ export interface ListWord {
   language: string;
   createdAt: number; // timestamp
 }
+
+// --- Story Types ---
+export interface Story {
+  id: string;
+  title: string;
+  level: string; // e.g. A1, B2
+  category: string; // e.g. Fantasy, Science-Fiction
+  content: string;
+  createdAt: any; // Firestore Timestamp
+}

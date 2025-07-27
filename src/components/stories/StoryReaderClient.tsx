@@ -4,40 +4,56 @@
 import { useState, useEffect } from "react";
 import type { Story } from "@/types";
 import { getStoryById } from "@/lib/stories-service";
-import { getStoryWordTranslation } from "@/ai/flows/translate-word-flow";
+import { translateWord } from "@/ai/flows/translate-word-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useSettings } from "@/hooks/useSettings";
+import { Badge } from "../ui/badge";
 
 interface StoryReaderClientProps {
     storyId: string;
 }
 
 const Word = ({ children }: { children: string }) => {
-    const [translation, setTranslation] = useState<string | null>(null);
+    const [translationResult, setTranslationResult] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const { sourceLanguage, targetLanguage } = useSettings();
 
     const handleWordClick = async () => {
-        if (translation) return; // Don't fetch again if already translated
+        if (translationResult) return; // Don't fetch again if already translated
+        
+        // Basic check to avoid translating very short or non-alphabetic words
+        if (children.trim().length < 2 || !/[a-zA-Z]/.test(children)) {
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const result = await getStoryWordTranslation({
+            const result = await translateWord({
                 word: children,
                 sourceLanguage,
                 targetLanguage
             });
-            setTranslation(result.translation);
+            if (result.translations && result.translations.length > 0) {
+                 setTranslationResult(result.translations);
+            } else {
+                 setTranslationResult(["Not found"]);
+            }
         } catch (error) {
             console.error("Translation failed:", error);
-            setTranslation("Translation failed.");
+            setTranslationResult(["Translation failed."]);
         } finally {
             setIsLoading(false);
         }
     };
+    
+    // Only make words that are likely actual words pop-up-able
+    if (children.trim().length < 2 || !/[a-zA-Z]/.test(children)) {
+        return <span>{children}</span>
+    }
     
     return (
         <Popover>
@@ -50,7 +66,13 @@ const Word = ({ children }: { children: string }) => {
                 </span>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <p className="text-sm font-semibold text-primary">{translation}</p>}
+                {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                 ) : (
+                    <p className="text-sm font-semibold text-primary">
+                        {translationResult?.join(', ') || '...'}
+                    </p>
+                 )}
             </PopoverContent>
         </Popover>
     )
@@ -73,16 +95,16 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
 
     const renderStoryContent = () => {
         if (!story?.content) return null;
-        // Basic regex to split by space and punctuation, keeping the punctuation
-        const wordsAndPunctuation = story.content.split(/(\s+|[,."“”;:?])/);
+        // Split by spaces and newlines to handle paragraphs
+        const wordsAndPunctuation = story.content.split(/(\s+)/);
 
         return wordsAndPunctuation.map((part, index) => {
-            // Check if the part is a word (contains letters)
-            if (/[a-zA-Z]/.test(part)) {
-                return <Word key={index}>{part}</Word>;
+            if (/\s+/.test(part)) {
+                // If the part is whitespace (including newlines), render it as such
+                 return <span key={index}>{part}</span>;
             }
-            // Otherwise, it's a space or punctuation
-            return <span key={index}>{part}</span>;
+            // Otherwise, it's a word possibly with punctuation
+            return <Word key={index}>{part}</Word>;
         });
     };
     
@@ -124,8 +146,12 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
             </Button>
             <div className="bg-card p-6 sm:p-8 lg:p-10 rounded-lg shadow-lg border">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary mb-2">{story.title}</h1>
-                <p className="text-muted-foreground text-lg mb-8">{story.level}</p>
-                <div className="prose prose-lg dark:prose-invert max-w-none text-foreground text-xl leading-relaxed">
+                <div className="flex gap-2 text-lg mb-8">
+                    <Badge variant="outline">{story.level}</Badge>
+                    <Badge variant="secondary">{story.category}</Badge>
+                </div>
+
+                <div className="prose prose-lg dark:prose-invert max-w-none text-foreground text-xl leading-relaxed whitespace-pre-wrap">
                     {renderStoryContent()}
                 </div>
             </div>
