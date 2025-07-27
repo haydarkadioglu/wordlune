@@ -18,6 +18,8 @@ export interface SettingsContextType {
   setTargetLanguage: (lang: string) => void;
   uiLanguage: string;
   setUiLanguage: (lang: string) => void;
+  storyListId: string;
+  setStoryListId: (listId: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

@@ -4,18 +4,24 @@ import { useSettings, SUPPORTED_LANGUAGES, SUPPORTED_UI_LANGUAGES } from '@/hook
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Languages as LanguageIcon } from 'lucide-react';
+import { Languages as LanguageIcon, BookOpenCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PasswordChangeForm from './PasswordChangeForm'; 
 import UsernameChangeForm from './UsernameChangeForm';
 import { Separator } from '@/components/ui/separator';
+import { useEffect, useState } from 'react';
+import type { UserList } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
+import { getLists } from '@/lib/list-service';
 
 export default function SettingsForm() {
   const { 
     sourceLanguage, targetLanguage, setSourceLanguage, setTargetLanguage, 
-    uiLanguage, setUiLanguage 
+    uiLanguage, setUiLanguage, storyListId, setStoryListId
   } = useSettings();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [lists, setLists] = useState<UserList[]>([]);
   
   const t = uiLanguage === 'en' ? {
     settingsSaved: 'Settings Saved',
@@ -27,7 +33,11 @@ export default function SettingsForm() {
     learningLanguage: "Language I'm Learning",
     selectLearningLanguage: 'This is the language of the words you are adding.',
     nativeLanguage: 'My Native Language',
-    selectNativeLanguage: 'Words will be translated into this language.'
+    selectNativeLanguage: 'Words will be translated into this language.',
+    storySettings: 'Story Settings',
+    storyList: 'Story Words List',
+    storyListDescription: 'Choose which list to save words to when reading stories.',
+    selectList: 'Select a list',
   } : {
     settingsSaved: 'Ayarlar Kaydedildi',
     preferencesUpdated: 'Tercihleriniz güncellendi.',
@@ -38,8 +48,19 @@ export default function SettingsForm() {
     learningLanguage: "Öğrendiğim Dil",
     selectLearningLanguage: 'Bu, eklediğiniz kelimelerin dilidir.',
     nativeLanguage: 'Ana Dilim',
-    selectNativeLanguage: 'Kelimeler bu dile çevrilecektir.'
+    selectNativeLanguage: 'Kelimeler bu dile çevrilecektir.',
+    storySettings: 'Hikaye Ayarları',
+    storyList: 'Hikaye Kelimeleri Listesi',
+    storyListDescription: 'Hikayeleri okurken kelimeleri hangi listeye kaydedeceğinizi seçin.',
+    selectList: 'Bir liste seçin',
   };
+
+  useEffect(() => {
+    if (user) {
+      const unsubscribe = getLists(user.uid, setLists);
+      return () => unsubscribe();
+    }
+  }, [user]);
 
   const handleSave = () => {
     toast({
@@ -60,6 +81,11 @@ export default function SettingsForm() {
 
   const handleUiLanguageChange = (value: string) => {
     setUiLanguage(value);
+  };
+  
+  const handleStoryListChange = (value: string) => {
+    setStoryListId(value);
+    handleSave();
   };
 
   return (
@@ -125,6 +151,34 @@ export default function SettingsForm() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <BookOpenCheck className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle className="font-headline text-2xl text-primary">{t.storySettings}</CardTitle>
+              <CardDescription>{t.storyListDescription}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="story-list" className="font-semibold">{t.storyList}</Label>
+             <Select value={storyListId} onValueChange={handleStoryListChange} disabled={!user || lists.length === 0}>
+              <SelectTrigger id="story-list" className="w-full">
+                <SelectValue placeholder={t.selectList} />
+              </SelectTrigger>
+              <SelectContent>
+                {lists.map(list => (
+                  <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
 
       <PasswordChangeForm />
     </div>

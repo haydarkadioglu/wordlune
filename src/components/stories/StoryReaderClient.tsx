@@ -6,42 +6,36 @@ import type { Story } from "@/types";
 import { getStoryById } from "@/lib/stories-service";
 import { translateWord } from "@/ai/flows/translate-word-flow";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useSettings } from "@/hooks/useSettings";
 import { Badge } from "../ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { addWordToList, createList, getListDetails } from "@/lib/list-service";
 
 interface StoryReaderClientProps {
     storyId: string;
 }
 
-const Word = ({ children }: { children: string }) => {
+const Word = ({ children, storyTitle }: { children: string, storyTitle: string }) => {
     const [translationResult, setTranslationResult] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const { sourceLanguage, targetLanguage } = useSettings();
+    const [isAdding, setIsAdding] = useState(false);
+    const { sourceLanguage, targetLanguage, storyListId, setStoryListId } = useSettings();
+    const { user } = useAuth();
+    const { toast } = useToast();
 
     const handleWordClick = async () => {
-        if (translationResult) return; // Don't fetch again if already translated
-        
-        // Basic check to avoid translating very short or non-alphabetic words
-        if (children.trim().length < 2 || !/[a-zA-Z]/.test(children)) {
-            return;
-        }
+        if (translationResult) return;
+        if (children.trim().length < 2 || !/[a-zA-Z]/.test(children)) return;
 
         setIsLoading(true);
         try {
-            const result = await translateWord({
-                word: children,
-                sourceLanguage,
-                targetLanguage
-            });
-            if (result.translations && result.translations.length > 0) {
-                 setTranslationResult(result.translations);
-            } else {
-                 setTranslationResult(["Not found"]);
-            }
+            const result = await translateWord({ word: children, sourceLanguage, targetLanguage });
+            setTranslationResult(result.translations && result.translations.length > 0 ? result.translations : ["Not found"]);
         } catch (error) {
             console.error("Translation failed:", error);
             setTranslationResult(["Translation failed."]);
@@ -50,7 +44,44 @@ const Word = ({ children }: { children: string }) => {
         }
     };
     
-    // Only make words that are likely actual words pop-up-able
+    const handleAddToList = async () => {
+        if (!user || !translationResult || translationResult[0] === "Not found") return;
+        setIsAdding(true);
+        
+        try {
+            let listId = storyListId;
+            const defaultListName = "Story Words";
+
+            if (!listId) {
+                const newListId = await createList(user.uid, defaultListName);
+                setStoryListId(newListId); // Update setting for future use
+                listId = newListId;
+                toast({ title: "List Created", description: `"${defaultListName}" list has been created for you.` });
+            } else {
+                const listExists = await getListDetails(user.uid, listId);
+                if (!listExists) {
+                    const newListId = await createList(user.uid, defaultListName);
+                    setStoryListId(newListId);
+                    listId = newListId;
+                    toast({ title: "List Re-created", description: `Your selected story list was not found, so "${defaultListName}" was created.` });
+                }
+            }
+
+            await addWordToList(user.uid, listId, {
+                word: children,
+                meaning: translationResult.join(', '),
+                example: storyTitle, // Using story title as context
+                language: targetLanguage,
+            });
+            toast({ title: "Word Added!", description: `"${children}" has been added to your list.` });
+        } catch (error) {
+            console.error("Failed to add word to list:", error);
+            toast({ title: "Error", description: "Could not add word to list.", variant: "destructive" });
+        } finally {
+            setIsAdding(false);
+        }
+    }
+
     if (children.trim().length < 2 || !/[a-zA-Z]/.test(children)) {
         return <span>{children}</span>
     }
@@ -66,13 +97,26 @@ const Word = ({ children }: { children: string }) => {
                 </span>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2">
-                {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                 ) : (
-                    <p className="text-sm font-semibold text-primary">
-                        {translationResult?.join(', ') || '...'}
-                    </p>
-                 )}
+                 <div className="flex items-center gap-2">
+                    {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <p className="text-sm font-semibold text-primary">
+                            {translationResult?.join(', ')}
+                        </p>
+                    )}
+                    {user && !isLoading && translationResult && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            onClick={handleAddToList}
+                            disabled={isAdding}
+                        >
+                            {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                        </Button>
+                    )}
+                </div>
             </PopoverContent>
         </Popover>
     )
@@ -95,16 +139,13 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
 
     const renderStoryContent = () => {
         if (!story?.content) return null;
-        // Split by spaces and newlines to handle paragraphs
         const wordsAndPunctuation = story.content.split(/(\s+)/);
 
         return wordsAndPunctuation.map((part, index) => {
             if (/\s+/.test(part)) {
-                // If the part is whitespace (including newlines), render it as such
                  return <span key={index}>{part}</span>;
             }
-            // Otherwise, it's a word possibly with punctuation
-            return <Word key={index}>{part}</Word>;
+            return <Word key={index} storyTitle={story.title}>{part}</Word>;
         });
     };
     

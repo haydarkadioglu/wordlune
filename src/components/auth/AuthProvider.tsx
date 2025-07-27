@@ -15,14 +15,17 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [sourceLanguage, setSourceLanguageState] = useState<string>('English');
   const [targetLanguage, setTargetLanguageState] = useState<string>('Turkish');
   const [uiLanguage, setUiLanguageState] = useState<string>('en');
+  const [storyListId, setStoryListIdState] = useState<string>('');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const savedSource = localStorage.getItem('sourceLanguage');
     const savedTarget = localStorage.getItem('targetLanguage');
     const savedUiLang = localStorage.getItem('uiLanguage');
+    const savedStoryListId = localStorage.getItem('storyListId');
     if (savedSource) setSourceLanguageState(savedSource);
     if (savedTarget) setTargetLanguageState(savedTarget);
+    if (savedStoryListId) setStoryListIdState(savedStoryListId);
     if (savedUiLang) {
         setUiLanguageState(savedUiLang);
         document.documentElement.lang = savedUiLang;
@@ -48,6 +51,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.lang = lang;
   };
 
+  const setStoryListId = (listId: string) => {
+    localStorage.setItem('storyListId', listId);
+    setStoryListIdState(listId);
+  }
+
   const value = useMemo(() => ({
     sourceLanguage,
     targetLanguage,
@@ -55,7 +63,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     setTargetLanguage,
     uiLanguage,
     setUiLanguage,
-  }), [sourceLanguage, targetLanguage, uiLanguage]);
+    storyListId,
+    setStoryListId
+  }), [sourceLanguage, targetLanguage, uiLanguage, storyListId]);
 
   if (!isLoaded) {
     return null; 
