@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, List } from 'lucide-react';
+import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, List, Shield } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
+import { isAdmin as checkIsAdmin } from '@/lib/admin-service';
 
 const NavLink = ({ href, children, onLinkClick }: { href: string; children: React.ReactNode, onLinkClick?: () => void }) => {
   const pathname = usePathname();
@@ -30,73 +31,35 @@ const NavLink = ({ href, children, onLinkClick }: { href: string; children: Reac
   );
 };
 
-const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
-    { href: "/dashboard/words", label: "All Words", icon: <List className="mr-2 h-4 w-4" /> },
-    { href: "/dashboard/lists", label: "My Lists", icon: <List className="mr-2 h-4 w-4" /> },
-    { href: "/dashboard/stories", label: "Stories", icon: <BookOpen className="mr-2 h-4 w-4" /> },
-];
-
 export default function Header() {
   const { user, signOut } = useAuth();
-<<<<<<< HEAD
-  const { uiLanguage, setUiLanguage } = useSettings();
-  const [theme, setTheme] = useState('light');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-=======
   const { uiLanguage, setUiLanguage, theme, toggleTheme } = useSettings();
   const [isAdmin, setIsAdmin] = useState(false);
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Effect to set the initial theme based on system preference
   useEffect(() => {
-<<<<<<< HEAD
-    // Check for existing consent. If not granted, we can't check localStorage.
-    const consent = localStorage.getItem('wordlune_cookie_consent');
-    let initialTheme = 'light';
-
-    if (consent === 'granted') {
-      const storedTheme = localStorage.getItem('theme');
-      if (storedTheme) {
-        initialTheme = storedTheme;
-      } else {
-        initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-    } else {
-      // If no consent, default to system preference without storing it
-       initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
-  }, []);
-
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    
-    // Only save to localStorage if consent has been given
-    const consent = localStorage.getItem('wordlune_cookie_consent');
-    if (consent === 'granted') {
-        localStorage.setItem('theme', newTheme);
-    }
-  };
-  
-  const handleLinkClick = () => {
-    setIsMobileMenuOpen(false);
-  }
-
-=======
     if (user) {
       checkIsAdmin(user).then(setIsAdmin);
     } else {
       setIsAdmin(false);
     }
   }, [user]);
+  
+  const handleLinkClick = () => {
+    setIsMobileMenuOpen(false);
+  }
 
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/words", label: "All Words", icon: <List className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/lists", label: "My Lists", icon: <List className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/stories", label: "Stories", icon: <BookOpen className="mr-2 h-4 w-4" /> },
+  ];
+
+  const adminNavItem = { href: "/admin", label: "Admin Panel", icon: <Shield className="mr-2 h-4 w-4" /> };
+  
+  const allNavItems = isAdmin ? [...navItems, adminNavItem] : navItems;
+
   return (
     <header className="bg-card/80 backdrop-blur-sm shadow-md sticky top-0 z-40 border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -110,11 +73,11 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="left" className="w-full max-w-xs p-4">
                <SheetHeader className="mb-6 text-left">
-                  <SheetTitle className="sr-only">Main Menu</SheetTitle>
                   <Logo />
+                  <SheetTitle className="sr-only">Main Menu</SheetTitle>
                </SheetHeader>
                <nav className="flex flex-col gap-2">
-                 {navItems.map(item => (
+                 {allNavItems.map(item => (
                     <NavLink key={item.href} href={item.href} onLinkClick={handleLinkClick}>
                         {item.icon} {item.label}
                     </NavLink>
@@ -124,7 +87,7 @@ export default function Header() {
           </Sheet>
           <Logo />
           <nav className="hidden md:flex items-center gap-1">
-             {navItems.map(item => (
+             {allNavItems.map(item => (
                 <Link 
                   key={item.href} 
                   href={item.href}
