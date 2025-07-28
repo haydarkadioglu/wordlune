@@ -62,7 +62,6 @@ export default function StoriesClient() {
     const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level).filter(Boolean))], [stories]);
     const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category).filter(Boolean))], [stories]);
 
-<<<<<<< HEAD
     const filteredStories = useMemo(() => {
         return stories.filter(story => {
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
@@ -110,16 +109,6 @@ export default function StoriesClient() {
                 </div>
             );
         }
-=======
-    const levelColors: Record<Story['level'], string> = {
-        'A1': 'bg-green-500 hover:bg-green-600',
-        'A2': 'bg-green-600 hover:bg-green-700',
-        'B1': 'bg-sky-500 hover:bg-sky-600',
-        'B2': 'bg-sky-600 hover:bg-sky-700',
-        'C1': 'bg-red-500 hover:bg-red-600',
-        'C2': 'bg-red-600 hover:bg-red-700',
-    };
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -162,7 +151,6 @@ export default function StoriesClient() {
                 </div>
             </div>
 
-<<<<<<< HEAD
             <Card>
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-center">
                     <Filter className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -202,37 +190,6 @@ export default function StoriesClient() {
             </Card>
 
             {renderContent()}
-=======
-            {stories.length === 0 ? (
-                <div className="text-center py-20 border-2 border-dashed rounded-lg">
-                    <h3 className="text-xl font-semibold">{t.noStories}</h3>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {stories.map((story) => (
-                        <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle>{story.title}</CardTitle>
-                                <CardDescription className="flex gap-2 flex-wrap">
-                                    <Badge className={levelColors[story.level]}>{story.level}</Badge>
-                                    <Badge variant="outline">{story.category}</Badge>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                               <p className="text-muted-foreground line-clamp-3">{story.content}</p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button asChild className="w-full">
-                                    <Link href={`/dashboard/stories/${story.id}`}>
-                                        {t.readStory} <ArrowRight className="ml-2" />
-                                    </Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
-                </div>
-            )}
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
         </div>
     );
 }
