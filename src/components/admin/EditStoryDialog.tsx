@@ -21,7 +21,7 @@ const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
   language: z.string().min(1, "Language is required."),
   level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
-  category: z.enum(['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror']),
+  category: z.enum(['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror', 'Bilimsel Yazı']),
   content: z.string().min(20, "Story content must be at least 20 characters."),
 });
 
@@ -34,7 +34,7 @@ interface EditStoryDialogProps {
 }
 
 const levels: Story['level'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-const categories: Story['category'][] = ['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror'];
+const categories: Story['category'][] = ['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror', 'Bilimsel Yazı'];
 
 export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditStoryDialogProps) {
   const { toast } = useToast();

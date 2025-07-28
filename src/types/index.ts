@@ -48,7 +48,7 @@ export interface Story {
   title: string;
   language: string; // e.g. English, Spanish
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-  category: 'Adventure' | 'Romance' | 'Mystery' | 'Science Fiction' | 'Fantasy' | 'Comedy' | 'Drama' | 'Horror';
+  category: 'Adventure' | 'Romance' | 'Mystery' | 'Science Fiction' | 'Fantasy' | 'Comedy' | 'Drama' | 'Horror' | 'Bilimsel Yazı';
   content: string;
   createdAt: any; // Firestore Timestamp
 }
