@@ -15,18 +15,13 @@ import { Textarea } from '../ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
+import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 
 const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
-<<<<<<< HEAD
   language: z.string().min(1, "Language is required."),
-  level: z.string().min(1, "Level is required (e.g., A1, B2)."),
-  category: z.string().min(2, "Category is required (e.g., Fantasy)."),
-=======
   level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
   category: z.enum(['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror']),
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
   content: z.string().min(20, "Story content must be at least 20 characters."),
 });
 
@@ -38,12 +33,9 @@ interface EditStoryDialogProps {
   story: Story | null;
 }
 
-<<<<<<< HEAD
-=======
 const levels: Story['level'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const categories: Story['category'][] = ['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror'];
 
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditStoryDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,41 +45,19 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     resolver: zodResolver(storySchema),
     defaultValues: {
       title: "",
-<<<<<<< HEAD
       language: "English",
-      level: "",
-      category: "",
-=======
       level: "A1",
       category: "Adventure",
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
       content: "",
     },
   });
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (story) {
-      form.reset({
-        title: story.title,
-        language: story.language,
-        level: story.level,
-        category: story.category,
-        content: story.content,
-      });
-    } else {
-      form.reset({
-        title: "",
-        language: "English",
-        level: "",
-        category: "",
-        content: "",
-      });
-=======
     if (isOpen) {
       if (story) {
         form.reset({
           title: story.title,
+          language: story.language,
           level: story.level,
           category: story.category,
           content: story.content,
@@ -95,12 +65,12 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
       } else {
         form.reset({
           title: "",
+          language: "English",
           level: "A1",
           category: "Adventure",
           content: "",
         });
       }
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
     }
   }, [story, form, isOpen]);
 
@@ -147,24 +117,6 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
             )}
           </div>
           
-           <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="level">Level (e.g., A1, B2)</Label>
-                <Input id="level" {...form.register('level')} />
-                {form.formState.errors.level && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="category">Category (e.g., Fantasy)</Label>
-                <Input id="category" {...form.register('category')} />
-                {form.formState.errors.category && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
-                )}
-              </div>
-            </div>
-
-<<<<<<< HEAD
             <div>
               <Label htmlFor="language">Language</Label>
                <Controller
@@ -187,7 +139,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
                 <p className="text-sm text-destructive mt-1">{form.formState.errors.language.message}</p>
               )}
             </div>
-=======
+
            <div>
             <Label htmlFor="level">Level</Label>
             <Select 
@@ -207,7 +159,6 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
               <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
             )}
           </div>
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 
           <div>
             <Label htmlFor="category">Category</Label>

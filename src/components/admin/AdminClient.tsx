@@ -30,36 +30,16 @@ export default function AdminClient() {
     const { sourceLanguage } = useSettings(); // To fetch stories for a default language
 
     useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-        
-        console.log("AdminClient useEffect:", { authLoading, user: user?.email });
-        
         if (!authLoading) {
             if (!user) {
-                console.log("No user found, redirecting to login");
                 router.replace('/login');
             } else {
-                console.log("User found, checking admin status for:", user.email);
                 checkIsAdmin(user).then(adminStatus => {
-                    console.log("Admin check result:", adminStatus);
                     setIsAdmin(adminStatus);
-<<<<<<< HEAD
                     setLoading(false);
                 });
-=======
-                    if (adminStatus) {
-                        unsubscribe = getStories(setStories);
-                    }
-                }).finally(() => setLoading(false));
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
             }
         }
-        
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
     }, [user, authLoading, router]);
 
     useEffect(() => {
@@ -136,11 +116,7 @@ export default function AdminClient() {
                             <TableRow>
                                 <TableHead className="w-[30%]">Title</TableHead>
                                 <TableHead className="w-[15%]">Level</TableHead>
-<<<<<<< HEAD
-                                <TableHead className="w-[15%]">Category</TableHead>
-=======
                                 <TableHead className="w-[20%]">Category</TableHead>
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
                                 <TableHead className="w-[20%]">Created At</TableHead>
                                 <TableHead className="text-right w-[15%]">Actions</TableHead>
                             </TableRow>
@@ -148,27 +124,15 @@ export default function AdminClient() {
                         <TableBody>
                             {stories.length === 0 ? (
                                 <TableRow>
-<<<<<<< HEAD
                                     <TableCell colSpan={5} className="h-24 text-center">No stories found for {sourceLanguage}.</TableCell>
-=======
-                                    <TableCell colSpan={5} className="h-24 text-center">No stories found.</TableCell>
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
                                     <TableRow key={story.id}>
                                         <TableCell className="font-medium">{story.title}</TableCell>
-<<<<<<< HEAD
                                         <TableCell><Badge variant="outline">{story.level}</Badge></TableCell>
                                         <TableCell><Badge variant="secondary">{story.category}</Badge></TableCell>
                                         <TableCell>{format(story.createdAt, 'PPpp')}</TableCell>
-=======
-                                        <TableCell>{story.level}</TableCell>
-                                        <TableCell>{story.category}</TableCell>
-                                        <TableCell>
-                                            {story.createdAt ? format(new Date(story.createdAt), 'PPpp') : 'Unknown'}
-                                        </TableCell>
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>
                                                 <Edit className="h-4 w-4" />

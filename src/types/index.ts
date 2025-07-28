@@ -47,8 +47,8 @@ export interface Story {
   id: string;
   title: string;
   language: string; // e.g. English, Spanish
-  level: string; // e.g. A1, B2
-  category: string; // e.g. Fantasy, Science-Fiction
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  category: 'Adventure' | 'Romance' | 'Mystery' | 'Science Fiction' | 'Fantasy' | 'Comedy' | 'Drama' | 'Horror';
   content: string;
   createdAt: any; // Firestore Timestamp
 }
