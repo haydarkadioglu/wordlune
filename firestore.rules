@@ -4,6 +4,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+<<<<<<< HEAD
     // Helper function to check if a user is an admin
     function isAdmin() {
       return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
@@ -55,6 +56,56 @@ service cloud.firestore {
     // Matches the language documents in the 'stories' collection
     match /stories/{language} {
       // Anyone can read the language document itself (if it contains metadata)
+=======
+    // Helper function to check if a user is the owner of a document by UID
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Rules for user profile documents, containing non-public info.
+    match /users/{userId} {
+      // A user can only create their own profile document
+      allow create: if isOwner(userId);
+      
+      // A user can only read their own profile
+      allow read: if isOwner(userId);
+      
+      // A user can update their own profile, but cannot change immutable fields like UID.
+      allow update: if isOwner(userId) && request.resource.data.uid == resource.data.uid;
+      
+      // Users cannot delete their profile documents.
+      allow delete: if false;
+    }
+
+     // --- Usernames: Publicly readable, but creation and deletion are restricted ---
+    match /usernames/{username} {
+      // Anyone can read to check if a username exists.
+      allow read;
+      // A user can only create a username entry that maps to their own userId.
+      allow create, update: if request.auth.uid == request.resource.data.userId;
+      // A user can only delete their own username entry.
+      // `resource.data` refers to the document state *before* the operation.
+      allow delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Rules for all other user-specific application data (words, lists, etc.).
+    match /data/{userId}/{document=**} {
+       // A user can perform any action (read, write) only within their own data path.
+      allow read, write: if isOwner(userId);
+    }
+    
+    // ADMINS: Only authenticated users can read to check admin status.
+    // WRITE: No one can write to this collection from the client-side.
+    match /admins/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // STORIES: Publicly readable stories.
+    // READ: Anyone can read stories.
+    // WRITE: Only admins can write (create, update, delete) stories.
+    match /stories/{storyId} {
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
       allow read: if true;
       // Only admins can write to the language document
       allow write: if isAdmin();
@@ -73,6 +124,7 @@ service cloud.firestore {
     match /admins/{userId} {
       allow read, write, create, delete: if false; // Nobody can modify admin list from client
     }
+<<<<<<< HEAD
 
     // Matches version documents
     match /versions/{versionId} {
@@ -80,6 +132,15 @@ service cloud.firestore {
         allow read: if true;
         // Only admins can update version information
         allow write: if isAdmin();
+=======
+    
+    // Versions: Contains app version info and download links.
+    // READ: Anyone can read this data.
+    // WRITE: No one can write to this collection from the client-side.
+    match /versions/{docId} {
+      allow read: if true;
+      allow write: if false;
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
     }
   }
 }

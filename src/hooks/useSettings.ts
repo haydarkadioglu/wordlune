@@ -20,6 +20,9 @@ export interface SettingsContextType {
   setUiLanguage: (lang: string) => void;
   storyListId: string;
   setStoryListId: (listId: string) => void;
+  theme: string;
+  setTheme: (theme: string) => void;
+  toggleTheme: () => void;
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

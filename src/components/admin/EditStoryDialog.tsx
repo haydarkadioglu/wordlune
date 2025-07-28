@@ -19,9 +19,14 @@ import { SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 
 const storySchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
+<<<<<<< HEAD
   language: z.string().min(1, "Language is required."),
   level: z.string().min(1, "Level is required (e.g., A1, B2)."),
   category: z.string().min(2, "Category is required (e.g., Fantasy)."),
+=======
+  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
+  category: z.enum(['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror']),
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
   content: z.string().min(20, "Story content must be at least 20 characters."),
 });
 
@@ -33,6 +38,12 @@ interface EditStoryDialogProps {
   story: Story | null;
 }
 
+<<<<<<< HEAD
+=======
+const levels: Story['level'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const categories: Story['category'][] = ['Adventure', 'Romance', 'Mystery', 'Science Fiction', 'Fantasy', 'Comedy', 'Drama', 'Horror'];
+
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditStoryDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,14 +53,20 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     resolver: zodResolver(storySchema),
     defaultValues: {
       title: "",
+<<<<<<< HEAD
       language: "English",
       level: "",
       category: "",
+=======
+      level: "A1",
+      category: "Adventure",
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
       content: "",
     },
   });
 
   useEffect(() => {
+<<<<<<< HEAD
     if (story) {
       form.reset({
         title: story.title,
@@ -66,6 +83,24 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
         category: "",
         content: "",
       });
+=======
+    if (isOpen) {
+      if (story) {
+        form.reset({
+          title: story.title,
+          level: story.level,
+          category: story.category,
+          content: story.content,
+        });
+      } else {
+        form.reset({
+          title: "",
+          level: "A1",
+          category: "Adventure",
+          content: "",
+        });
+      }
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
     }
   }, [story, form, isOpen]);
 
@@ -77,6 +112,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
             title: isEditing ? "Story Updated!" : "Story Created!",
             description: `The story "${values.title}" has been saved.`,
         });
+        form.reset(); // Reset form after successful save
         onOpenChange(false);
     } catch (error) {
         console.error("Failed to save story:", error);
@@ -86,8 +122,15 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
     }
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      form.reset(); // Reset form when dialog closes
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Story' : 'Create New Story'}</DialogTitle>
@@ -121,6 +164,7 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
               </div>
             </div>
 
+<<<<<<< HEAD
             <div>
               <Label htmlFor="language">Language</Label>
                <Controller
@@ -143,6 +187,47 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
                 <p className="text-sm text-destructive mt-1">{form.formState.errors.language.message}</p>
               )}
             </div>
+=======
+           <div>
+            <Label htmlFor="level">Level</Label>
+            <Select 
+              onValueChange={(value) => form.setValue('level', value as Story['level'])} 
+              value={form.watch('level')}
+            >
+                <SelectTrigger id="level">
+                    <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                    {levels.map(level => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+             {form.formState.errors.level && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.level.message}</p>
+            )}
+          </div>
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
+
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select 
+              onValueChange={(value) => form.setValue('category', value as Story['category'])} 
+              value={form.watch('category')}
+            >
+                <SelectTrigger id="category">
+                    <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+             {form.formState.errors.category && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>
+            )}
+          </div>
 
           <div>
             <Label htmlFor="content">Content</Label>

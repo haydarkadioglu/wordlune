@@ -16,6 +16,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [targetLanguage, setTargetLanguageState] = useState<string>('Turkish');
   const [uiLanguage, setUiLanguageState] = useState<string>('en');
   const [storyListId, setStoryListIdState] = useState<string>('');
+  const [theme, setThemeState] = useState<string>('light');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const savedTarget = localStorage.getItem('targetLanguage');
     const savedUiLang = localStorage.getItem('uiLanguage');
     const savedStoryListId = localStorage.getItem('storyListId');
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
     if (savedSource) setSourceLanguageState(savedSource);
     if (savedTarget) setTargetLanguageState(savedTarget);
     if (savedStoryListId) setStoryListIdState(savedStoryListId);
@@ -32,8 +36,28 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     } else {
         document.documentElement.lang = 'en';
     }
+    
+    if (savedTheme) {
+      setThemeState(savedTheme);
+    } else if (systemPrefersDark) {
+      setThemeState('dark');
+    } else {
+      setThemeState('light');
+    }
+    
     setIsLoaded(true);
   }, []);
+
+  // Apply theme changes to DOM
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [theme]);
 
   const setSourceLanguage = (lang: string) => {
     localStorage.setItem('sourceLanguage', lang);
@@ -56,6 +80,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     setStoryListIdState(listId);
   }
 
+  const setTheme = (newTheme: string) => {
+    setThemeState(newTheme);
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
   const value = useMemo(() => ({
     sourceLanguage,
     targetLanguage,
@@ -64,8 +96,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     uiLanguage,
     setUiLanguage,
     storyListId,
-    setStoryListId
-  }), [sourceLanguage, targetLanguage, uiLanguage, storyListId]);
+    setStoryListId,
+    theme,
+    setTheme,
+    toggleTheme,
+  }), [sourceLanguage, targetLanguage, uiLanguage, storyListId, theme]);
 
   if (!isLoaded) {
     return null; 

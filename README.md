@@ -1,6 +1,8 @@
-# WordLune - AI-Powered Vocabulary Builder
+# WordLune - AI-Powered Vocabulary Builder 🚀
 
 **WordLune** is a modern web application designed to help users expand their vocabulary using the power of generative AI. Save, categorize, and master new words with intelligent tools that provide context, pronunciation, and translations on the fly.
+
+**🌐 Live Demo**: [wordlune.web.app](https://wordlune.web.app)
 
 ## ✨ Key Features
 

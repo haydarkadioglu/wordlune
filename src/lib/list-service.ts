@@ -214,3 +214,47 @@ export async function deleteMultipleWordsFromList(
         transaction.update(listDocRef, { wordCount: increment(-wordIds.length) });
     });
 }
+
+// --- Stories List Management ---
+
+export async function findOrCreateStoriesList(userId: string): Promise<string> {
+    if (!userId || !db) throw new Error("User not authenticated or database not available.");
+    
+    const listsCollectionRef = collection(db, 'data', userId, 'lists');
+    const q = query(listsCollectionRef, orderBy('createdAt', 'desc'));
+    const listsSnapshot = await getDocs(q);
+    
+    // Check if Stories list already exists
+    for (const listDoc of listsSnapshot.docs) {
+        const listData = listDoc.data() as UserList;
+        if (listData.name === "Stories") {
+            return listDoc.id;
+        }
+    }
+    
+    // If not found, create a new Stories list
+    const newList = {
+        name: "Stories",
+        createdAt: Date.now(),
+        wordCount: 0,
+    };
+    const docRef = await addDoc(listsCollectionRef, newList);
+    return docRef.id;
+}
+
+export async function addWordToStoriesList(
+    userId: string,
+    word: string,
+    meaning: string
+): Promise<void> {
+    if (!userId || !word || !meaning || !db) throw new Error("Missing required parameters.");
+    
+    const storiesListId = await findOrCreateStoriesList(userId);
+    
+    await addWordToList(userId, storiesListId, {
+        word,
+        meaning,
+        example: `Example with "${word}".`, // Default example
+        language: "English" // Default language
+    });
+}

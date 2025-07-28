@@ -39,12 +39,18 @@ const navItems = [
 
 export default function Header() {
   const { user, signOut } = useAuth();
+<<<<<<< HEAD
   const { uiLanguage, setUiLanguage } = useSettings();
   const [theme, setTheme] = useState('light');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+=======
+  const { uiLanguage, setUiLanguage, theme, toggleTheme } = useSettings();
+  const [isAdmin, setIsAdmin] = useState(false);
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 
   // Effect to set the initial theme based on system preference
   useEffect(() => {
+<<<<<<< HEAD
     // Check for existing consent. If not granted, we can't check localStorage.
     const consent = localStorage.getItem('wordlune_cookie_consent');
     let initialTheme = 'light';
@@ -82,6 +88,15 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   }
 
+=======
+    if (user) {
+      checkIsAdmin(user).then(setIsAdmin);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
   return (
     <header className="bg-card/80 backdrop-blur-sm shadow-md sticky top-0 z-40 border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">

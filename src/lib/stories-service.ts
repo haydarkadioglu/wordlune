@@ -1,5 +1,5 @@
 
-import { db } from '@/lib/firebase';
+import { db, isFirebaseReady } from '@/lib/firebase';
 import type { Story } from '@/types';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc } from 'firebase/firestore';
 
@@ -9,6 +9,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, order
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function.
  */
+<<<<<<< HEAD
 export function getStories(language: string, callback: (stories: Story[]) => void) {
   if (!db || !language) {
       callback([]);
@@ -16,6 +17,15 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
   }
 
   const storiesCollectionRef = collection(db, 'stories', language, 'stories');
+=======
+export function getStories(callback: (stories: Story[]) => void) {
+  if (!isFirebaseReady()) {
+    console.warn("Firebase not ready for getStories");
+    return () => {};
+  }
+
+  const storiesCollectionRef = collection(db!, 'stories');
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
   const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -45,6 +55,7 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
  * @param storyId The ID of the story to fetch.
  * @returns The story object or null if not found.
  */
+<<<<<<< HEAD
 export async function getStoryById(language: string, storyId: string): Promise<Story | null> {
     if (!db || !language) return null;
     const storyDocRef = doc(db, 'stories', language, 'stories', storyId);
@@ -57,8 +68,30 @@ export async function getStoryById(language: string, storyId: string): Promise<S
             language,
             createdAt: data.createdAt?.toMillis() || Date.now()
         } as Story
+=======
+export async function getStoryById(storyId: string): Promise<Story | null> {
+    if (!isFirebaseReady()) {
+        console.warn("Firebase not ready for getStoryById");
+        return null;
     }
-    return null;
+    
+    try {
+        const storyDocRef = doc(db!, 'stories', storyId);
+        const docSnap = await getDoc(storyDocRef);
+        if(docSnap.exists()){
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                ...data,
+                createdAt: data.createdAt?.toMillis() || Date.now()
+            } as Story
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching story by ID:", error);
+        return null;
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
+    }
 }
 
 
@@ -72,8 +105,11 @@ export async function upsertStory(
     storyData: Omit<Story, 'id' | 'createdAt'>, 
     storyId?: string
 ): Promise<void> {
-    if (!db) throw new Error("Database not available.");
+    if (!isFirebaseReady()) {
+        throw new Error("Firebase not ready.");
+    }
     
+<<<<<<< HEAD
     const { language, ...dataToSave } = storyData;
     if (!language) throw new Error("Story language must be provided.");
 
@@ -89,6 +125,24 @@ export async function upsertStory(
             ...dataToSave,
             createdAt: serverTimestamp()
         });
+=======
+    try {
+        if (storyId) {
+            // Update existing story
+            const storyDocRef = doc(db!, 'stories', storyId);
+            await updateDoc(storyDocRef, storyData);
+        } else {
+            // Create new story
+            const storiesCollectionRef = collection(db!, 'stories');
+            await addDoc(storiesCollectionRef, {
+                ...storyData,
+                createdAt: serverTimestamp()
+            });
+        }
+    } catch (error) {
+        console.error("Error upserting story:", error);
+        throw error;
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
     }
 }
 
@@ -98,9 +152,24 @@ export async function upsertStory(
  * @param language The language of the story.
  * @param storyId The ID of the story to delete.
  */
+<<<<<<< HEAD
 export async function deleteStory(language: string, storyId: string): Promise<void> {
     if (!db) throw new Error("Database not available.");
     if (!language) throw new Error("Story language must be provided for deletion.");
     const storyDocRef = doc(db, 'stories', language, 'stories', storyId);
     await deleteDoc(storyDocRef);
+=======
+export async function deleteStory(storyId: string): Promise<void> {
+    if (!isFirebaseReady()) {
+        throw new Error("Firebase not ready.");
+    }
+    
+    try {
+        const storyDocRef = doc(db!, 'stories', storyId);
+        await deleteDoc(storyDocRef);
+    } catch (error) {
+        console.error("Error deleting story:", error);
+        throw error;
+    }
+>>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 }
