@@ -48,8 +48,9 @@ const translateWordFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await translatePrompt(input);
-    if (!output) {
-      throw new Error('Failed to get a translation from the AI.');
+    if (!output || !Array.isArray(output.translations)) {
+      console.error("Invalid output from translatePrompt:", output);
+      throw new Error('Failed to get a valid translation from the AI.');
     }
     return output;
   }

@@ -44,7 +44,6 @@ export interface ListWord {
 
 // --- Story Types ---
 export interface Story {
-<<<<<<< HEAD
   id: string;
   title: string;
   language: string; // e.g. English, Spanish
@@ -52,12 +51,4 @@ export interface Story {
   category: string; // e.g. Fantasy, Science-Fiction
   content: string;
   createdAt: any; // Firestore Timestamp
-=======
-    id: string;
-    title: string;
-    content: string;
-    level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-    category: 'Adventure' | 'Romance' | 'Mystery' | 'Science Fiction' | 'Fantasy' | 'Comedy' | 'Drama' | 'Horror';
-    createdAt: number; // timestamp
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 }

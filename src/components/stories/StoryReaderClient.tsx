@@ -4,31 +4,19 @@
 import { useState, useEffect } from "react";
 import type { Story } from "@/types";
 import { getStoryById } from "@/lib/stories-service";
-<<<<<<< HEAD
 import { translateWord } from "@/ai/flows/translate-word-flow";
+import { addWordToList, createList, getListDetails } from "@/lib/list-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, ArrowLeft, PlusCircle } from "lucide-react";
-=======
-import { getStoryWordTranslation } from "@/ai/flows/translate-word-flow";
-import { addWordToStoriesList } from "@/lib/list-service";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, ArrowLeft, Plus } from "lucide-react";
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useSettings } from "@/hooks/useSettings";
-<<<<<<< HEAD
-import { Badge } from "../ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { addWordToList, createList, getListDetails } from "@/lib/list-service";
 import { useSearchParams } from "next/navigation";
-=======
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
+
 
 interface StoryReaderClientProps {
     storyId: string;
@@ -38,11 +26,7 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
     const [translationResult, setTranslationResult] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-<<<<<<< HEAD
     const { sourceLanguage, targetLanguage, storyListId, setStoryListId } = useSettings();
-=======
-    const { sourceLanguage, targetLanguage } = useSettings();
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -59,28 +43,6 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
             setTranslationResult(["Translation failed."]);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleAddToList = async () => {
-        if (!user || !translation) return;
-        
-        setIsAdding(true);
-        try {
-            await addWordToStoriesList(user.uid, children, translation);
-            toast({
-                title: "Kelime Eklendi!",
-                description: `"${children}" kelimesi Stories listesine eklendi.`,
-            });
-        } catch (error) {
-            console.error("Failed to add word to list:", error);
-            toast({
-                title: "Hata",
-                description: "Kelime eklenirken bir hata oluştu.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsAdding(false);
         }
     };
     
@@ -136,7 +98,6 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
                     {children}
                 </span>
             </PopoverTrigger>
-<<<<<<< HEAD
             <PopoverContent className="w-auto p-2">
                  <div className="flex items-center gap-2">
                     {isLoading ? (
@@ -146,7 +107,7 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
                             {translationResult?.join(', ')}
                         </p>
                     )}
-                    {user && !isLoading && translationResult && (
+                    {user && !isLoading && translationResult && translationResult[0] !== "Not found" && (
                         <Button
                             size="icon"
                             variant="ghost"
@@ -158,38 +119,6 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
                         </Button>
                     )}
                 </div>
-=======
-            <PopoverContent className="w-64 p-4 shadow-lg">
-                {isLoading ? (
-                    <div className="flex items-center justify-center">
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        <span className="text-sm text-muted-foreground">Çevriliyor...</span>
-                    </div>
-                ) : translation ? (
-                    <div className="space-y-3">
-                        <div className="text-center">
-                            <p className="text-lg font-semibold text-primary leading-relaxed">{translation}</p>
-                        </div>
-                        {user && (
-                            <div className="flex justify-center pt-2 border-t">
-                                <Button 
-                                    onClick={handleAddToList}
-                                    disabled={isAdding}
-                                    size="sm"
-                                    className="bg-primary hover:bg-primary/90 text-white"
-                                >
-                                    {isAdding ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                    ) : (
-                                        <Plus className="h-4 w-4 mr-1" />
-                                    )}
-                                    Stories'e Ekle
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                ) : null}
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
             </PopoverContent>
         </Popover>
     )
@@ -262,20 +191,12 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
             </Button>
             <div className="bg-card p-6 sm:p-8 lg:p-10 rounded-lg shadow-lg border">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary mb-2">{story.title}</h1>
-<<<<<<< HEAD
                 <div className="flex gap-2 text-lg mb-8">
                     <Badge variant="outline">{story.level}</Badge>
                     <Badge variant="secondary">{story.category}</Badge>
                 </div>
 
                 <div className="prose prose-lg dark:prose-invert max-w-none text-foreground text-xl leading-relaxed whitespace-pre-wrap">
-=======
-                <div className="flex gap-2 mb-8">
-                    <Badge variant="secondary">{story.level}</Badge>
-                    <Badge variant="outline">{story.category}</Badge>
-                </div>
-                <div className="prose prose-lg dark:prose-invert max-w-none text-foreground text-xl leading-relaxed">
->>>>>>> 2fb7b24f193876ca2e418d16c709a791b34f21a2
                     {renderStoryContent()}
                 </div>
             </div>
