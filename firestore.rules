@@ -1,46 +1,53 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // == USER DATA (Words, Lists, etc.) ==
-    // Users can only read and write to their own data subcollections.
-    match /data/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
     
-    // == USER PROFILES ==
-    // Users can read and update their own profile.
-    // No one can create a profile for someone else.
-    // No one can delete profiles.
-    match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null; // Typically on registration
-    }
-    
-    // == USERNAMES (for uniqueness) ==
-    // Anyone authenticated can read usernames to check for existence.
-    // You can only create a username document if you are logged in.
-    // You can only delete your own username document (as part of a username change).
-    match /usernames/{username} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // == STORIES ==
-    // Anyone can read stories.
-    // Only admins can create, update, or delete stories.
-    match /stories/{language}/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    // Admins: Only allow a user to read their own admin document. Deny list/write.
+    match /admins/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow list, write: if false;
     }
     
-    // == ADMINS ==
-    // Default deny all access to the admins collection for security.
-    match /admins/{userId} {
-       allow read: if request.auth != null && request.auth.uid == userId;
-       allow list, create, update, delete: if false;
+    // Usernames: Allow creation if the username is not taken. Allow deletion only by the owner.
+    match /usernames/{username} {
+       allow read; // Allow checking if a username exists
+       allow create: if isSignedIn(); // Allow any signed-in user to attempt to create
+       allow delete: if isSignedIn() && isOwner(resource.data.userId); // Allow owner to delete (for username changes)
+       allow update: if false;
+    }
+
+    // User profiles: Users can read/update their own profile.
+    match /users/{userId} {
+      allow read, update: if isSignedIn() && isOwner(userId);
+      allow create, delete: if false;
+    }
+    
+    // Stories: Allow anyone to read, but only admins to write/delete.
+    match /stories/{language}/stories/{storyId} {
+      allow read;
+      allow write, delete: if isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Versions: Allow anyone to read public version info (like app links).
+    match /versions/{versionId} {
+      allow read;
+      allow write: if false; // Only updatable from the server/console
+    }
+
+    // User data (words, lists, etc.): Only accessible by the owner.
+    match /data/{userId}/{document=**} {
+      allow read, write, delete: if isSignedIn() && isOwner(userId);
     }
   }
 }
