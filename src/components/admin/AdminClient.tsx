@@ -32,7 +32,7 @@ export default function AdminClient() {
     useEffect(() => {
         if (!authLoading) {
             if (!user) {
-                router.replace('/login');
+                router.replace('/admin/login');
             } else {
                 checkIsAdmin(user).then(adminStatus => {
                     setIsAdmin(adminStatus);
