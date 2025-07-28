@@ -36,6 +36,7 @@ export default function Header() {
   const { uiLanguage, setUiLanguage, theme, toggleTheme } = useSettings();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname(); // Moved hook to top level
 
   useEffect(() => {
     if (user) {
@@ -94,7 +95,7 @@ export default function Header() {
                   className={cn(
                     buttonVariants({ variant: 'ghost' }),
                     "text-muted-foreground hover:text-primary",
-                    usePathname().startsWith(item.href) && "text-primary bg-primary/10"
+                    pathname.startsWith(item.href) && "text-primary bg-primary/10"
                   )}
                 >
                   {item.label}
