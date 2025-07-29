@@ -91,7 +91,7 @@ export default function UpsertStoryDialog({ isOpen, onOpenChange, story }: Upser
         const storyData = { 
             ...values, 
             authorName: user.username,
-            authorPhotoURL: user.photoURL || undefined
+            authorPhotoURL: user.photoURL || ''
         };
         await upsertUserStory(user.uid, storyData, story?.id);
         toast({
