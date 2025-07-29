@@ -24,7 +24,8 @@ export default function AdminClient() {
 
     useEffect(() => {
         if (sourceLanguage) {
-            const unsubscribe = getStories(sourceLanguage, setStories, false); // Fetch all stories, not just published
+            // Admin gets all stories, published or not
+            const unsubscribe = getStories(sourceLanguage, setStories); 
             return () => unsubscribe();
         }
     }, [sourceLanguage]);

@@ -5,27 +5,19 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, order
 
 /**
  * Fetches all stories for a specific language and listens for real-time updates.
- * Can filter by published status.
+ * This function fetches both published and draft stories. Filtering should be done client-side.
  * @param language The language of the stories to fetch.
  * @param callback Function to call with the array of stories.
- * @param onlyPublished Whether to fetch only published stories. Defaults to true.
  * @returns Unsubscribe function.
  */
-export function getStories(language: string, callback: (stories: Story[]) => void, onlyPublished = true) {
+export function getStories(language: string, callback: (stories: Story[]) => void) {
   if (!db || !language) {
       callback([]);
       return () => {};
   }
 
   const storiesCollectionRef = collection(db, 'stories', language, 'stories');
-  
-  let q;
-  if (onlyPublished) {
-    q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
-  } else {
-    // For admin, fetch all stories
-    q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
-  }
+  const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
 
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {

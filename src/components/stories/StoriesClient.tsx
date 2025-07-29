@@ -44,7 +44,7 @@ const translations = {
 };
 
 export default function StoriesClient() {
-    const [stories, setStories] = useState<Story[]>([]);
+    const [allStories, setAllStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { uiLanguage, sourceLanguage } = useSettings();
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
@@ -55,22 +55,23 @@ export default function StoriesClient() {
     useEffect(() => {
         setIsLoading(true);
         const unsubscribe = getStories(sourceLanguage, (fetchedStories) => {
-            setStories(fetchedStories);
+            setAllStories(fetchedStories);
             setIsLoading(false);
         });
         return () => unsubscribe();
     }, [sourceLanguage]);
     
-    const uniqueLevels = useMemo(() => [...new Set(stories.map(s => s.level).filter(Boolean))], [stories]);
-    const uniqueCategories = useMemo(() => [...new Set(stories.map(s => s.category).filter(Boolean))], [stories]);
+    const uniqueLevels = useMemo(() => [...new Set(allStories.map(s => s.level).filter(Boolean))], [allStories]);
+    const uniqueCategories = useMemo(() => [...new Set(allStories.map(s => s.category).filter(Boolean))], [allStories]);
 
     const filteredStories = useMemo(() => {
-        return stories.filter(story => {
+        return allStories.filter(story => {
+            const isPublished = story.isPublished;
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
             const categoryMatch = categoryFilter === 'all' || story.category === categoryFilter;
-            return levelMatch && categoryMatch;
+            return isPublished && levelMatch && categoryMatch;
         });
-    }, [stories, levelFilter, categoryFilter]);
+    }, [allStories, levelFilter, categoryFilter]);
     
     const clearFilters = () => {
         setLevelFilter('all');
