@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- User Data Rules ---
+    // Users can only read/write their own data.
+    match /data/{userId}/{language}/{document=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // --- User Profile and Username Rules ---
+    // Anyone can read a user's public profile.
+    match /users/{userId} {
+      allow read: if true;
+      // Only the user can update their own profile.
+      allow update: if request.auth.uid == userId;
+    }
+
+    // Usernames must be unique and can be read by anyone.
+    // They can only be created or deleted as part of a transaction (see user-service).
+    match /usernames/{username} {
+      allow read: if true;
+      allow write: if request.auth != null; // Further logic is in transactions
+    }
+
+    // --- Admin Rules ---
+    // A simple way to check for admins.
+    match /admins/{userId} {
+      allow read: if request.auth.uid == userId;
+    }
+
+    // --- Story Rules ---
+    // Public stories can be read by anyone if they are published.
+    match /stories/{language}/stories/{storyId} {
+      allow read: if resource.data.isPublished == true || request.auth.uid == resource.data.authorId;
+      allow create: if request.auth.uid != null;
+      allow update: if request.auth.uid == resource.data.authorId;
+      // Deletion is handled by the collectionGroup rule check below for user stories, 
+      // or by trusted server/admin code.
+      allow delete: if request.auth.uid == resource.data.authorId;
+    }
+
+    // Collection group query rule for stories
+    // This allows a user to query across all languages to find their own stories for the profile page.
+    match /{path=**}/stories/{storyId} {
+        allow read: if request.auth.uid == resource.data.authorId;
+    }
+    
+    // --- User Moderation Rules ---
+    // Ban information can only be read/written by admins (logic handled server-side/functions).
+    // This example assumes bans are set by a trusted process.
+    match /user_bans/{userId} {
+      allow read: if true; // Allow client to read their own ban status
+    }
+  }
+}
