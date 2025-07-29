@@ -53,5 +53,12 @@ export interface Story {
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   category: 'Adventure' | 'Romance' | 'Mystery' | 'Science Fiction' | 'Fantasy' | 'Comedy' | 'Drama' | 'Horror' | 'Bilimsel Yazı';
   content: string;
+  authorId: string;
+  authorName: string;
+  authorPhotoURL?: string;
+  isPublished: boolean;
+  likeCount: number;
+  commentCount: number;
   createdAt: any; // Firestore Timestamp
+  updatedAt: any; // Firestore Timestamp
 }

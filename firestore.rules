@@ -3,51 +3,72 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+  
+    // Deny all reads and writes by default.
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Admins: Only allow a user to read their own admin document. Deny list/write.
-    match /admins/{userId} {
-      allow read: if isSignedIn() && isOwner(userId);
-      allow list, write: if false;
-    }
-    
-    // Usernames: Allow creation if the username is not taken. Allow deletion only by the owner.
-    match /usernames/{username} {
-       allow read; // Allow checking if a username exists
-       allow create: if isSignedIn(); // Allow any signed-in user to attempt to create
-       allow delete: if isSignedIn() && isOwner(resource.data.userId); // Allow owner to delete (for username changes)
-       allow update: if false;
-    }
-
-    // User profiles: Users can read/update their own profile.
-    match /users/{userId} {
-      allow read, update: if isSignedIn() && isOwner(userId);
-      allow create, delete: if false;
-    }
-    
-    // Stories: Allow anyone to read, but only admins to write/delete.
-    match /stories/{language}/stories/{storyId} {
-      allow read;
-      allow write, delete: if isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Versions: Allow anyone to read public version info (like app links).
+    // Allow anyone to read public version information
     match /versions/{versionId} {
-      allow read;
-      allow write: if false; // Only updatable from the server/console
+        allow read: if true;
+        allow write: if false; // Nobody can write client-side
     }
 
-    // User data (words, lists, etc.): Only accessible by the owner.
-    match /data/{userId}/{document=**} {
-      allow read, write, delete: if isSignedIn() && isOwner(userId);
+    // Username to UID mapping must be public for lookups, but write is restricted
+    match /usernames/{username} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // User profile documents
+    match /users/{userId} {
+        // A user can create their own profile
+        allow create: if request.auth.uid == userId;
+        // A user can read their own profile
+        allow read: if request.auth.uid == userId;
+        // A user can update their own displayName and username
+        allow update: if request.auth.uid == userId && request.resource.data.keys().hasOnly(['displayName', 'username']);
+    }
+
+    // Allow users to manage their own login history
+    match /users/{userId}/loginHistory/{historyId} {
+        allow read, write, delete: if request.auth.uid == userId;
+    }
+
+    // --- Admin Rules ---
+    // Admins collection: Only allow reads for the user's own document
+    match /admins/{userId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // Should be managed server-side or via console
+    }
+
+    // --- User Data (Lists & Words) Rules ---
+    // The main data path is now nested under language
+    match /data/{userId}/{language}/{listId} {
+        // Users can create, update, and delete their own lists
+        allow read, write: if request.auth.uid == userId;
+    }
+
+    match /data/{userId}/{language}/{listId}/words/{wordId} {
+        // Users can manage words within their own lists
+        allow read, write: if request.auth.uid == userId;
+    }
+
+    // --- Story Rules ---
+
+    // Public stories collection (readable by all, writable only by owners through transactions)
+    match /stories/{language}/stories/{storyId} {
+        allow read: if true; // Everyone can read published stories
+        allow create: if request.auth != null; // Authenticated users can create
+        allow update: if request.auth != null && request.auth.uid == resource.data.authorId; // Only authors can update
+        allow delete: if request.auth != null && request.auth.uid == resource.data.authorId; // Only authors can delete
+    }
+
+    // Private author-specific stories collection (for managing their own stories)
+    match /stories_by_author/{userId}/stories/{storyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId; // Full control for the author
     }
   }
 }

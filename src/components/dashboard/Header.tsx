@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, List, Shield } from 'lucide-react';
+import { LogOut, Sun, Moon, Cog, Languages, Menu, BookOpen, LayoutDashboard, List, Shield, User } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import { useSettings, SUPPORTED_UI_LANGUAGES } from '@/hooks/useSettings';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -52,9 +52,9 @@ export default function Header() {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
-    { href: "/dashboard/words", label: "All Words", icon: <List className="mr-2 h-4 w-4" /> },
     { href: "/dashboard/lists", label: "My Lists", icon: <List className="mr-2 h-4 w-4" /> },
     { href: "/dashboard/stories", label: "Stories", icon: <BookOpen className="mr-2 h-4 w-4" /> },
+    { href: "/dashboard/profile", label: "My Profile", icon: <User className="mr-2 h-4 w-4" /> },
   ];
 
   const adminNavItem = { href: "/admin", label: "Admin Panel", icon: <Shield className="mr-2 h-4 w-4" /> };

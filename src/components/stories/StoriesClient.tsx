@@ -6,7 +6,7 @@ import type { Story } from "@/types";
 import { getStories } from "@/lib/stories-service";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, BookOpen, ArrowRight, Filter, XCircle } from "lucide-react";
+import { Loader2, BookOpen, ArrowRight, Filter, XCircle, Heart, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
@@ -26,6 +26,7 @@ const translations = {
     filterByCategory: 'Filter by category',
     clearFilters: 'Clear Filters',
     loadingStories: 'Loading stories for',
+    by: 'By',
   },
   tr: {
     title: 'Hikayeler',
@@ -38,6 +39,7 @@ const translations = {
     filterByCategory: 'Kategoriye göre filtrele',
     clearFilters: 'Filtreleri Temizle',
     loadingStories: 'Hikayeler yükleniyor:',
+    by: 'Yazar',
   }
 };
 
@@ -116,6 +118,10 @@ export default function StoriesClient() {
                     <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                         <CardHeader>
                             <CardTitle>{story.title}</CardTitle>
+                            <div className="flex justify-between items-center pt-2 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1"><User className="h-3 w-3" /> {story.authorName}</span>
+                                <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {story.likeCount}</span>
+                            </div>
                             <CardDescription className="flex gap-2 pt-2">
                                 <Badge variant="outline">{story.level}</Badge>
                                 <Badge variant="secondary">{story.category}</Badge>
