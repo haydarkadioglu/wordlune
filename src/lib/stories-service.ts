@@ -153,7 +153,7 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
             stories.push({
                 id: doc.id,
                 ...data,
-                language: data.language, // Ensure language is included
+                language: data.language, // Ensure language is included from the document data
                 createdAt: data.createdAt?.toMillis() || Date.now(),
                 updatedAt: data.updatedAt?.toMillis() || Date.now(),
             } as Story);
