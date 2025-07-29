@@ -1,22 +1,32 @@
 
 import { db, isFirebaseReady } from '@/lib/firebase';
 import type { Story } from '@/types';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firebase/firestore';
 
 /**
- * Fetches all PUBLISHED stories for a specific language and listens for real-time updates.
+ * Fetches all stories for a specific language and listens for real-time updates.
+ * Can filter by published status.
  * @param language The language of the stories to fetch.
  * @param callback Function to call with the array of stories.
+ * @param onlyPublished Whether to fetch only published stories. Defaults to true.
  * @returns Unsubscribe function.
  */
-export function getStories(language: string, callback: (stories: Story[]) => void) {
+export function getStories(language: string, callback: (stories: Story[]) => void, onlyPublished = true) {
   if (!db || !language) {
       callback([]);
       return () => {};
   }
 
   const storiesCollectionRef = collection(db, 'stories', language, 'stories');
-  const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
+  
+  let q;
+  if (onlyPublished) {
+    q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
+  } else {
+    // For admin, fetch all stories
+    q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
+  }
+
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const stories: Story[] = [];
@@ -38,6 +48,51 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
 
   return unsubscribe;
 }
+
+/**
+ * Fetches all published stories from non-admin users across all languages.
+ * @param callback Function to call with the array of stories.
+ * @returns Unsubscribe function for real-time updates.
+ */
+export function getAllPublishedUserStories(callback: (stories: Story[]) => void) {
+    if (!db) {
+        callback([]);
+        return () => {};
+    }
+
+    const storiesCollectionGroup = collectionGroup(db, 'stories');
+    const q = query(
+        storiesCollectionGroup,
+        where("isPublished", "==", true),
+        where("authorId", "!=", "admin"),
+        orderBy("authorId"), // Firestore requires an orderBy when using inequality filters
+        orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const stories: Story[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const language = doc.ref.parent.parent?.id; // stories/{language}/stories/{storyId} -> parent.parent is {language}
+            if (language) {
+                stories.push({
+                    id: doc.id,
+                    ...data,
+                    language, // Add language from path
+                    createdAt: data.createdAt?.toMillis() || Date.now(),
+                    updatedAt: data.updatedAt?.toMillis() || Date.now(),
+                } as Story);
+            }
+        });
+        callback(stories);
+    }, (error) => {
+        console.error("Error fetching all user stories: ", error);
+        callback([]);
+    });
+
+    return unsubscribe;
+}
+
 
 /**
  * Fetches all stories by a specific author.
@@ -193,7 +248,7 @@ export async function upsertUserStory(
 }
 
 /**
- * ADMIN ONLY: Deletes a story from all locations.
+ * ADMIN or AUTHOR: Deletes a story from all locations.
  * @param story The full story object to delete.
  */
 export async function deleteStory(story: Story): Promise<void> {

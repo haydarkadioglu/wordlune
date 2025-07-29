@@ -1,6 +1,6 @@
 
-import AdminClient from "@/components/admin/AdminClient";
+import AdminTabs from "@/components/admin/AdminTabs";
 
 export default function AdminPage() {
-    return <AdminClient />;
+    return <AdminTabs />;
 }

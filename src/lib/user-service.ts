@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction, setDoc } from 'firebase/firestore';
 
 const MAX_LOGIN_HISTORY = 25;
 
@@ -143,4 +143,78 @@ export async function logLoginHistory(userId: string) {
     console.error("Error logging login history:", error);
     // This is a background task, so we don't show a toast to the user.
   }
+}
+
+// --- User Moderation ---
+
+/**
+ * Bans a user from creating/editing stories.
+ * @param userId The ID of the user to ban.
+ * @param duration Can be 'week' or 'permanent'.
+ */
+export async function banUser(userId: string, duration: 'week' | 'permanent'): Promise<void> {
+    if (!db) throw new Error("Database not available.");
+    
+    const banDocRef = doc(db, 'user_bans', userId);
+    let bannedUntil = null;
+    let isPermanent = false;
+    
+    if (duration === 'permanent') {
+        isPermanent = true;
+    } else { // 'week'
+        const banEndDate = new Date();
+        banEndDate.setDate(banEndDate.getDate() + 7);
+        bannedUntil = banEndDate;
+    }
+
+    await setDoc(banDocRef, { isPermanent, bannedUntil, bannedAt: serverTimestamp() });
+}
+
+/**
+ * Lifts a ban for a user.
+ * @param userId The ID of the user to unban.
+ */
+export async function unbanUser(userId: string): Promise<void> {
+    if (!db) throw new Error("Database not available.");
+    const banDocRef = doc(db, 'user_bans', userId);
+    await runTransaction(db, async (transaction) => {
+        const banDoc = await transaction.get(banDocRef);
+        if (banDoc.exists()) {
+            transaction.delete(banDocRef);
+        }
+    });
+}
+
+
+/**
+ * Gets the ban status for a user.
+ * @param userId The ID of the user to check.
+ * @returns An object with `isBanned` and a `message`, or null if not banned.
+ */
+export async function getUserBanStatus(userId: string): Promise<{ isBanned: boolean; message: string; } | null> {
+    if (!db) return null;
+    const banDocRef = doc(db, 'user_bans', userId);
+    const banDoc = await getDoc(banDocRef);
+
+    if (!banDoc.exists()) {
+        return null;
+    }
+    
+    const data = banDoc.data();
+    if (data.isPermanent) {
+        return { isBanned: true, message: 'You are permanently banned from posting stories.' };
+    }
+    
+    if (data.bannedUntil) {
+        const bannedUntilDate = data.bannedUntil.toDate();
+        if (bannedUntilDate > new Date()) {
+            return { isBanned: true, message: `You are banned from posting stories until ${bannedUntilDate.toLocaleDateString()}.` };
+        } else {
+            // Ban has expired, we can remove it.
+            await unbanUser(userId);
+            return null;
+        }
+    }
+    
+    return null;
 }

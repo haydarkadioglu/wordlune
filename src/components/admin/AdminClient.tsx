@@ -2,12 +2,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { isAdmin as checkIsAdmin } from '@/lib/admin-service';
 import { getStories, deleteStory } from '@/lib/stories-service';
 import type { Story } from '@/types';
-import { Loader2, ShieldX, List, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { List, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,10 +16,6 @@ import { Badge } from '../ui/badge';
 import { useSettings } from '@/hooks/useSettings';
 
 export default function AdminClient() {
-    const { user, loading: authLoading } = useAuth();
-    const router = useRouter();
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [stories, setStories] = useState<Story[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingStory, setEditingStory] = useState<Story | null>(null);
@@ -30,24 +23,11 @@ export default function AdminClient() {
     const { sourceLanguage } = useSettings(); // To fetch stories for a default language
 
     useEffect(() => {
-        if (!authLoading) {
-            if (!user) {
-                router.replace('/admin/login');
-            } else {
-                checkIsAdmin(user).then(adminStatus => {
-                    setIsAdmin(adminStatus);
-                    setLoading(false);
-                });
-            }
-        }
-    }, [user, authLoading, router]);
-
-    useEffect(() => {
-        if (isAdmin && sourceLanguage) {
-            const unsubscribe = getStories(sourceLanguage, setStories);
+        if (sourceLanguage) {
+            const unsubscribe = getStories(sourceLanguage, setStories, false); // Fetch all stories, not just published
             return () => unsubscribe();
         }
-    }, [isAdmin, sourceLanguage]);
+    }, [sourceLanguage]);
 
     const handleNewStory = () => {
         setEditingStory(null);
@@ -77,25 +57,6 @@ export default function AdminClient() {
         }
     };
 
-    if (loading || authLoading) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    if (!isAdmin) {
-        return (
-            <div className="flex flex-col justify-center items-center h-screen text-center">
-                <ShieldX className="h-24 w-24 text-destructive mb-4" />
-                <h1 className="text-4xl font-bold">Access Denied</h1>
-                <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
-                <Button onClick={() => router.push('/dashboard')} className="mt-6">Go to Dashboard</Button>
-            </div>
-        );
-    }
-
     return (
         <div className="space-y-8">
              <Card className="shadow-lg">
@@ -115,24 +76,30 @@ export default function AdminClient() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[30%]">Title</TableHead>
-                                <TableHead className="w-[15%]">Level</TableHead>
-                                <TableHead className="w-[20%]">Category</TableHead>
-                                <TableHead className="w-[20%]">Created At</TableHead>
-                                <TableHead className="text-right w-[15%]">Actions</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Level</TableHead>
+                                <TableHead>Author</TableHead>
+                                <TableHead>Created At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {stories.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">No stories found for {sourceLanguage}.</TableCell>
+                                    <TableCell colSpan={6} className="h-24 text-center">No stories found for {sourceLanguage}.</TableCell>
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
                                     <TableRow key={story.id}>
                                         <TableCell className="font-medium">{story.title}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={story.isPublished ? 'default' : 'secondary'}>
+                                                {story.isPublished ? 'Published' : 'Draft'}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell><Badge variant="outline">{story.level}</Badge></TableCell>
-                                        <TableCell><Badge variant="secondary">{story.category}</Badge></TableCell>
-                                        <TableCell>{format(story.createdAt, 'PPpp')}</TableCell>
+                                        <TableCell>{story.authorName}</TableCell>
+                                        <TableCell>{format(new Date(story.createdAt), 'PPpp')}</TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>
                                                 <Edit className="h-4 w-4" />

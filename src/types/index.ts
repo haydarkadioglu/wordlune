@@ -62,3 +62,10 @@ export interface Story {
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
 }
+
+// --- Moderation Types ---
+export interface UserBan {
+    isPermanent: boolean;
+    bannedUntil: any; // Firestore Timestamp or null
+    bannedAt: any; // Firestore Timestamp
+}
