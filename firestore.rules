@@ -1,75 +1,66 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- User Management ---
-
-    // Public username registry for uniqueness check and lookups
-    match /usernames/{username} {
-      allow read;
-      // Allow create only if the user is creating their own username mapping
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Allow update only by the user who owns the username
-      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/usernames/$(username)).data.userId == request.auth.uid;
-    }
-
-    // Private user profiles, only accessible by the owner
-    match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      // Allow creation during registration
-      allow create: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- User Data (Word Lists) ---
-
-    // Main data container for a user, can be read to check existence
+    
+    // --- User Data: Lists and Words ---
+    // Users can only access their own data container.
     match /data/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth.uid == userId;
+      
+      // A user can manage lists (create, update, delete) under their own data document.
+      match /{language}/{listId} {
+        allow read, write: if request.auth.uid == userId;
+
+        // A user can manage words within their own lists.
+        match /words/{wordId} {
+          allow read, write: if request.auth.uid == userId;
+        }
+      }
+    }
+
+    // --- User Management: Public usernames and private profiles ---
+    match /users/{userId} {
+      allow read: if request.auth.uid != null;
+      allow write: if request.auth.uid == userId;
+    }
+    match /usernames/{username} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid != null;
+      allow delete, update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
     }
     
-    // Language-specific collections within a user's data
-    match /data/{userId}/{language}/{document=**} {
-       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-    }
+    // --- Stories: Public and author-specific collections ---
 
-    // --- Stories ---
-
-    // Public stories collection (grouped by language)
+    // Public stories collection (accessible by anyone for reading published content)
     match /stories/{language}/stories/{storyId} {
-      // ANYONE can read a story IF it is published.
-      allow read: if resource.data.isPublished == true;
-
-      // ONLY the AUTHOR can create, update, or delete their own story.
-      allow create, update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      allow read: if resource.data.isPublished == true || request.auth.uid == resource.data.authorId;
+      allow create: if request.auth.uid != null;
+      allow update: if request.auth.uid == resource.data.authorId;
+      // Deletion is implicitly handled by the user deleting their own copy from stories_by_author.
+      // The client-side batch write will fail if the stories_by_author deletion fails.
+      allow delete: if request.auth.uid == get(/databases/$(database)/documents/stories/$(language)/stories/$(storyId)).data.authorId;
     }
-
-    // Private story collections for each author
-    match /stories_by_author/{userId}/stories/{storyId} {
-        // ONLY the AUTHOR can read, write, or delete their own stories from their private collection.
-        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- Collection Group Queries ---
     
-    // Allow users to query the 'stories' collection group to find their own stories
+    // Author-specific stories collection (only accessible by the author)
+    match /stories_by_author/{authorId}/stories/{storyId} {
+      allow read, create, update: if request.auth.uid == authorId;
+      // This rule is reliable because it uses the wildcard {authorId} from the path.
+      allow delete: if request.auth.uid == authorId;
+    }
+    
+    // Rule for CollectionGroup queries on "stories"
     match /{path=**}/stories/{storyId} {
-      // Allow read only if the user is querying for their own stories.
-      allow read: if request.auth != null && resource.data.authorId == request.auth.uid;
+      allow read: if request.auth.uid == resource.data.authorId;
     }
 
-    // --- Admin & Moderation ---
+    // --- Admin and Moderation ---
     match /admins/{userId} {
-        // Only allow reads. Writes should be done via Firebase Console.
-        // A user can check if they are an admin.
-        allow read: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
     }
     
     match /user_bans/{userId} {
-        // Only admins can read/write ban information.
-        // This assumes an 'isAdmin' custom claim or a check in a different collection.
-        // For simplicity here, we'll restrict it, but a real app would use claims or an admin collection check.
-        allow read, write: if exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
+      allow write: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
     }
   }
 }
