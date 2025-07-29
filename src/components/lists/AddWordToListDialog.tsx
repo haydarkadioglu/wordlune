@@ -105,15 +105,6 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
   const [dialogTargetLanguage, setDialogTargetLanguage] = useState(targetLanguage);
 
-  useEffect(() => {
-    if (isOpen) {
-      setDialogTargetLanguage(targetLanguage);
-    } else {
-      // Reset form when dialog closes
-      form.reset();
-    }
-  }, [isOpen, targetLanguage]);
-  
   const form = useForm<FormData>({
     resolver: zodResolver(getFormSchema(uiLanguage as 'en' | 'tr')),
     defaultValues: {
@@ -123,6 +114,17 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
       category: 'Uncategorized'
     },
   });
+  
+  const wordValue = form.watch("word");
+
+  useEffect(() => {
+    if (isOpen) {
+      setDialogTargetLanguage(targetLanguage);
+    } else {
+      // Reset form when dialog closes
+      form.reset();
+    }
+  }, [isOpen, targetLanguage, form]);
 
   const onSubmit = async (values: FormData) => {
     if (!user || !listId) {
@@ -200,8 +202,8 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
         type="button" 
         variant="outline" 
         size="sm" 
-        onClick={() => handleAIGeneration(action, form.getValues("word"))}
-        disabled={disabled || isSubmitting || !form.getValues("word")}
+        onClick={() => handleAIGeneration(action, wordValue)}
+        disabled={disabled || isSubmitting || !wordValue}
         className={`text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent ${className}`}
     >
         {disabled ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3" />}
