@@ -1,7 +1,7 @@
 
 import { db, isFirebaseReady } from '@/lib/firebase';
 import type { Story } from '@/types';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch } from 'firebase/firestore';
 
 /**
  * Fetches all PUBLISHED stories for a specific language and listens for real-time updates.
@@ -85,7 +85,6 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
  */
 export async function getStoryById(language: string, storyId: string): Promise<Story | null> {
     if (!db || !language) return null;
-    // This function can be used by anyone, so we fetch from the public collection
     const storyDocRef = doc(db, 'stories', language, 'stories', storyId);
     const docSnap = await getDoc(storyDocRef);
     if(docSnap.exists()){
@@ -104,13 +103,14 @@ export async function getStoryById(language: string, storyId: string): Promise<S
 
 /**
  * Creates a new story or updates an existing one for a specific user.
+ * Writes to both public and user-specific collections.
  * @param userId The ID of the user creating/updating the story.
  * @param storyData The data for the story.
  * @param storyId The ID of the story to update (optional).
  */
 export async function upsertUserStory(
     userId: string,
-    storyData: Omit<Story, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName' | 'authorPhotoURL' | 'likeCount' | 'commentCount'> & { authorName: string, authorPhotoURL?: string },
+    storyData: Omit<Story, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'likeCount' | 'commentCount'>,
     storyId?: string
 ): Promise<void> {
     if (!isFirebaseReady() || !userId) {
@@ -123,16 +123,16 @@ export async function upsertUserStory(
     const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
     const authorStoryCollectionRef = collection(db, 'stories_by_author', userId, 'stories');
     
+    const batch = writeBatch(db);
+
     if (storyId) {
         // Update existing story
         const publicStoryDocRef = doc(publicStoryCollectionRef, storyId);
         const authorStoryDocRef = doc(authorStoryCollectionRef, storyId);
         const updatePayload = { ...dataToSave, updatedAt: serverTimestamp() };
         
-        const batch = db.batch();
         batch.update(publicStoryDocRef, updatePayload);
         batch.update(authorStoryDocRef, updatePayload);
-        await batch.commit();
 
     } else {
         // Create new story
@@ -144,10 +144,37 @@ export async function upsertUserStory(
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
-        const newPublicDocRef = await addDoc(publicStoryCollectionRef, newStoryPayload);
+        const newPublicDocRef = doc(publicStoryCollectionRef); // Create a reference with a new ID
         const authorStoryDocRef = doc(authorStoryCollectionRef, newPublicDocRef.id);
-        await db.setDoc(authorStoryDocRef, newStoryPayload);
+        
+        batch.set(newPublicDocRef, newStoryPayload);
+        batch.set(authorStoryDocRef, newStoryPayload);
     }
+
+    await batch.commit();
+}
+
+/**
+ * ADMIN ONLY: Deletes a story from all locations.
+ * @param story The full story object to delete.
+ */
+export async function deleteStory(story: Story): Promise<void> {
+    if (!db) throw new Error("Database not available.");
+    if (!story || !story.id || !story.language || !story.authorId) {
+        throw new Error("Complete story object with id, language, and authorId is required.");
+    }
+
+    const batch = writeBatch(db);
+    
+    // Reference to the public story document
+    const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
+    batch.delete(publicStoryDocRef);
+    
+    // Reference to the author's story document (if it exists)
+    const authorStoryDocRef = doc(db, 'stories_by_author', story.authorId, 'stories', story.id);
+    batch.delete(authorStoryDocRef);
+    
+    await batch.commit();
 }
 
 
@@ -157,18 +184,12 @@ export async function upsertUserStory(
  * @param story The story object to delete.
  */
 export async function deleteUserStory(userId: string, story: Story): Promise<void> {
-    if (!db) throw new Error("Database not available.");
     if (!userId || !story || !story.language || !story.id) throw new Error("User or story information is missing.");
 
     if (userId !== story.authorId) {
         throw new Error("You can only delete your own stories.");
     }
-
-    const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
-    const authorStoryDocRef = doc(db, 'stories_by_author', userId, 'stories', story.id);
     
-    const batch = db.batch();
-    batch.delete(publicStoryDocRef);
-    batch.delete(authorStoryDocRef);
-    await batch.commit();
+    // Uses the generic deleteStory function which handles deletion from all locations.
+    await deleteStory(story);
 }

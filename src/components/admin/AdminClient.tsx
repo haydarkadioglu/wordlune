@@ -61,7 +61,7 @@ export default function AdminClient() {
 
     const handleDeleteStory = async (story: Story) => {
         try {
-            await deleteStory(story.language, story.id);
+            await deleteStory(story);
             toast({
                 title: "Story Deleted",
                 description: `"${story.title}" has been successfully deleted.`,
