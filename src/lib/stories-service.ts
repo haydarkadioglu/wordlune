@@ -1,7 +1,7 @@
 
 import { db, isFirebaseReady } from '@/lib/firebase';
 import type { Story } from '@/types';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firebase/firestore';
 
 /**
  * ADMIN ONLY: Fetches all stories for a specific language (published and drafts) and listens for real-time updates.
