@@ -4,8 +4,8 @@ import type { Story } from '@/types';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firebase/firestore';
 
 /**
- * Fetches all stories for a specific language and listens for real-time updates.
- * This function fetches both published and draft stories. Filtering should be done client-side.
+ * Fetches all PUBLISHED stories for a specific language and listens for real-time updates.
+ * This is used for the main stories page where only published content should be visible.
  * @param language The language of the stories to fetch.
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function.
@@ -17,8 +17,8 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
   }
 
   const storiesCollectionRef = collection(db, 'stories', language, 'stories');
-  const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
-
+  // Query only for published stories, ordered by creation date.
+  const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const stories: Story[] = [];
@@ -42,7 +42,7 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
 }
 
 /**
- * Fetches all published stories from non-admin users across all languages.
+ * Fetches all published stories from non-admin users across all languages for moderation.
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function for real-time updates.
  */
@@ -57,7 +57,7 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
         storiesCollectionGroup,
         where("isPublished", "==", true),
         where("authorId", "!=", "admin"),
-        orderBy("authorId"), // Firestore requires an orderBy when using inequality filters
+        orderBy("authorId"), 
         orderBy('createdAt', 'desc')
     );
 
@@ -65,12 +65,12 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
         const stories: Story[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            const language = doc.ref.parent.parent?.id; // stories/{language}/stories/{storyId} -> parent.parent is {language}
+            const language = doc.ref.parent.parent?.id; 
             if (language) {
                 stories.push({
                     id: doc.id,
                     ...data,
-                    language, // Add language from path
+                    language, 
                     createdAt: data.createdAt?.toMillis() || Date.now(),
                     updatedAt: data.updatedAt?.toMillis() || Date.now(),
                 } as Story);
@@ -87,7 +87,7 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
 
 
 /**
- * Fetches all stories by a specific author.
+ * Fetches all stories (published and drafts) by a specific author. Used for the profile page.
  * @param authorId The ID of the author.
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function.
@@ -149,7 +149,6 @@ export async function getStoryById(language: string, storyId: string): Promise<S
 
 /**
  * ADMIN ONLY: Creates a new story or updates an existing one.
- * Bypasses user-specific collections, intended for admin panel use.
  * @param storyData The data for the story, including language.
  * @param storyId The ID of the story to update (optional).
  */
@@ -165,17 +164,15 @@ export async function upsertStory(
     const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
     
     if (storyId) {
-        // Update existing story
         const storyDocRef = doc(publicStoryCollectionRef, storyId);
         await updateDoc(storyDocRef, { ...dataToSave, updatedAt: serverTimestamp() });
     } else {
-        // Create new story with default values for admin-added content
         const newStoryPayload = {
             ...dataToSave,
             authorId: 'admin',
             authorName: 'WordLune Team',
             authorPhotoURL: '',
-            isPublished: true, // Admin stories are published by default
+            isPublished: true, 
             likeCount: 0,
             commentCount: 0,
             createdAt: serverTimestamp(),
@@ -188,7 +185,6 @@ export async function upsertStory(
 
 /**
  * Creates a new story or updates an existing one for a specific user.
- * Writes to both public and user-specific collections.
  * @param userId The ID of the user creating/updating the story.
  * @param storyData The data for the story.
  * @param storyId The ID of the story to update (optional).
@@ -211,7 +207,6 @@ export async function upsertUserStory(
     const batch = writeBatch(db);
 
     if (storyId) {
-        // Update existing story
         const publicStoryDocRef = doc(publicStoryCollectionRef, storyId);
         const authorStoryDocRef = doc(authorStoryCollectionRef, storyId);
         const updatePayload = { ...dataToSave, updatedAt: serverTimestamp() };
@@ -220,7 +215,6 @@ export async function upsertUserStory(
         batch.update(authorStoryDocRef, updatePayload);
 
     } else {
-        // Create new story
         const newStoryPayload = {
             ...dataToSave,
             authorId: userId,
@@ -229,7 +223,7 @@ export async function upsertUserStory(
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
-        const newPublicDocRef = doc(publicStoryCollectionRef); // Create a reference with a new ID
+        const newPublicDocRef = doc(publicStoryCollectionRef);
         const authorStoryDocRef = doc(authorStoryCollectionRef, newPublicDocRef.id);
         
         batch.set(newPublicDocRef, newStoryPayload);
@@ -251,11 +245,9 @@ export async function deleteStory(story: Story): Promise<void> {
 
     const batch = writeBatch(db);
     
-    // Reference to the public story document
     const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
     batch.delete(publicStoryDocRef);
     
-    // Reference to the author's story document (if it exists and author is not admin)
     if (story.authorId !== 'admin') {
       const authorStoryDocRef = doc(db, 'stories_by_author', story.authorId, 'stories', story.id);
       batch.delete(authorStoryDocRef);
@@ -277,6 +269,5 @@ export async function deleteUserStory(userId: string, story: Story): Promise<voi
         throw new Error("You can only delete your own stories.");
     }
     
-    // Uses the generic deleteStory function which handles deletion from all locations.
     await deleteStory(story);
 }
