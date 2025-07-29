@@ -14,18 +14,20 @@ import CreateListDialog from "./CreateListDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useSettings";
 
 export default function ListsClient() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const { sourceLanguage } = useSettings();
     const [lists, setLists] = useState<UserList[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
     useEffect(() => {
-        if (user) {
+        if (user && sourceLanguage) {
             setIsLoading(true);
-            const unsubscribe = getLists(user.uid, (fetchedLists) => {
+            const unsubscribe = getLists(user.uid, sourceLanguage, (fetchedLists) => {
                 setLists(fetchedLists);
                 setIsLoading(false);
             });
@@ -33,12 +35,12 @@ export default function ListsClient() {
         } else {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, sourceLanguage]);
 
     const handleDelete = async (listId: string, listName: string) => {
         if (!user) return;
         try {
-            await deleteList(user.uid, listId);
+            await deleteList(user.uid, sourceLanguage, listId);
             toast({
                 title: "List Deleted",
                 description: `"${listName}" has been deleted.`,
@@ -84,7 +86,7 @@ export default function ListsClient() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-2">
                         <List />
-                        My Vocabulary Lists
+                        My Vocabulary Lists ({sourceLanguage})
                     </h1>
                     <p className="text-muted-foreground mt-1">
                         Create and manage your custom word collections.
@@ -98,7 +100,7 @@ export default function ListsClient() {
 
             {lists.length === 0 ? (
                 <div className="text-center py-20 border-2 border-dashed rounded-lg">
-                    <h3 className="text-xl font-semibold">No lists created yet</h3>
+                    <h3 className="text-xl font-semibold">No lists created yet for {sourceLanguage}</h3>
                     <p className="text-muted-foreground mt-2">Click "Create New List" to get started.</p>
                 </div>
             ) : (

@@ -28,7 +28,7 @@ const translations = {
   en: {
     back: 'Back to Lists',
     listNotFound: 'List not found',
-    listNotFoundDesc: 'This list may have been deleted or does not exist.',
+    listNotFoundDesc: 'This list may have been deleted or does not exist for the selected language.',
     goBack: 'Go back to lists',
     wordsInCollection: (count: number) => `${count} words in this collection.`,
     addWord: 'Add Word',
@@ -53,7 +53,7 @@ const translations = {
   tr: {
     back: 'Listelere Geri Dön',
     listNotFound: 'Liste bulunamadı',
-    listNotFoundDesc: 'Bu liste silinmiş veya mevcut olmayabilir.',
+    listNotFoundDesc: 'Bu liste silinmiş veya seçili dil için mevcut olmayabilir.',
     goBack: 'Listelere geri dön',
     wordsInCollection: (count: number) => `Bu koleksiyonda ${count} kelime var.`,
     addWord: 'Kelime Ekle',
@@ -82,7 +82,7 @@ type SortOption = 'date_desc' | 'date_asc' | 'alpha_asc' | 'alpha_desc';
 export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const { user } = useAuth();
     const { toast } = useToast();
-    const { uiLanguage } = useSettings();
+    const { uiLanguage, sourceLanguage } = useSettings();
     const [list, setList] = useState<UserList | null>(null);
     const [words, setWords] = useState<ListWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -96,15 +96,15 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
     useEffect(() => {
-        if (user) {
+        if (user && sourceLanguage) {
             setIsLoading(true);
             const fetchListDetails = async () => {
-                const details = await getListDetails(user.uid, listId);
+                const details = await getListDetails(user.uid, sourceLanguage, listId);
                 setList(details);
             };
             fetchListDetails();
 
-            const unsubscribe = getWordsForList(user.uid, listId, (fetchedWords) => {
+            const unsubscribe = getWordsForList(user.uid, sourceLanguage, listId, (fetchedWords) => {
                 setWords(fetchedWords);
                 setIsLoading(false);
             });
@@ -117,12 +117,12 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
         } else {
             setIsLoading(false);
         }
-    }, [user, listId]);
+    }, [user, listId, sourceLanguage]);
     
     const handleBulkDelete = async () => {
         if (!user || selectedWords.length === 0) return;
         try {
-            await deleteMultipleWordsFromList(user.uid, listId, selectedWords);
+            await deleteMultipleWordsFromList(user.uid, sourceLanguage, listId, selectedWords);
             toast({
                 title: "Words Deleted",
                 description: `${selectedWords.length} words have been removed from the list.`,
@@ -165,14 +165,14 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
         const newWords = [...words];
         switch (sortOption) {
             case 'date_asc':
-                return newWords.sort((a, b) => a.createdAt - b.createdAt);
+                return newWords.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             case 'alpha_asc':
                 return newWords.sort((a, b) => a.word.localeCompare(b.word));
             case 'alpha_desc':
                 return newWords.sort((a, b) => b.word.localeCompare(a.word));
             case 'date_desc':
             default:
-                return newWords.sort((a, b) => b.createdAt - a.createdAt);
+                return newWords.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         }
     }, [words, sortOption]);
 

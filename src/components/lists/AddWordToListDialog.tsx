@@ -132,7 +132,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
 
     setIsSubmitting(true);
     try {
-      await addWordToList(user.uid, listId, {
+      await addWordToList(user.uid, sourceLanguage, listId, {
         ...values,
         language: dialogTargetLanguage,
       });

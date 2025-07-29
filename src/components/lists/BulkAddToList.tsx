@@ -96,7 +96,7 @@ export default function BulkAddToListDialog({ isOpen, onOpenChange, listId }: Bu
       });
 
       if (result.processedWords && result.processedWords.length > 0) {
-        await addMultipleWordsToList(user.uid, listId, result.processedWords, targetLanguage);
+        await addMultipleWordsToList(user.uid, sourceLanguage, listId, result.processedWords, targetLanguage);
         toast({ title: t.wordsAdded, description: t.wordsAddedDesc(result.processedWords.length) });
         reset(); 
         onOpenChange(false);

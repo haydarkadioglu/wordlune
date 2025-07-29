@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -30,6 +31,7 @@ interface CreateListDialogProps {
 export default function CreateListDialog({ isOpen, onOpenChange }: CreateListDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sourceLanguage } = useSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<FormData>({
@@ -47,10 +49,10 @@ export default function CreateListDialog({ isOpen, onOpenChange }: CreateListDia
 
     setIsSubmitting(true);
     try {
-      await createList(user.uid, values.name);
+      await createList(user.uid, sourceLanguage, values.name);
       toast({
         title: "Success!",
-        description: `List "${values.name}" has been created.`,
+        description: `List "${values.name}" has been created for ${sourceLanguage}.`,
       });
       form.reset();
       onOpenChange(false);
@@ -68,7 +70,7 @@ export default function CreateListDialog({ isOpen, onOpenChange }: CreateListDia
         <DialogHeader>
           <DialogTitle>Create New List</DialogTitle>
           <DialogDescription>
-            Give your new vocabulary list a name. You can add words after creating it.
+            Give your new vocabulary list a name for the <span className='font-bold text-primary'>{sourceLanguage}</span> language.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">

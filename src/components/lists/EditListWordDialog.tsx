@@ -79,7 +79,7 @@ interface EditListWordDialogProps {
 export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordToEdit }: EditListWordDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { uiLanguage } = useSettings();
+  const { uiLanguage, sourceLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,7 +113,7 @@ export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordT
 
     setIsSubmitting(true);
     try {
-      await updateWordInList(user.uid, listId, wordToEdit.id, values);
+      await updateWordInList(user.uid, sourceLanguage, listId, wordToEdit.id, values);
       toast({
         title: t.updateSuccess,
         description: t.updateSuccessDesc(values.word),

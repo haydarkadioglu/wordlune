@@ -31,7 +31,7 @@ const translations = {
     allCategories: 'All Categories',
     cardsView: 'Cards',
     tableView: 'Table',
-    noLists: "No lists found.",
+    noLists: "No lists found for this language.",
     noListsDesc: "You need to create a list before you can add a word.",
   },
   tr: {
@@ -44,7 +44,7 @@ const translations = {
     allCategories: 'Tüm Kategoriler',
     cardsView: 'Kartlar',
     tableView: 'Tablo',
-    noLists: "Hiç liste bulunamadı.",
+    noLists: "Bu dil için hiç liste bulunamadı.",
     noListsDesc: "Kelime ekleyebilmek için önce bir liste oluşturmalısınız.",
   }
 };
@@ -54,7 +54,7 @@ const allCategories: WordCategory[] = ['All', 'Very Good', 'Good', 'Bad', 'Repea
 export default function AllWordsClient() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { uiLanguage } = useSettings();
+  const { uiLanguage, sourceLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const [words, setWords] = useState<(ListWord & { listId: string; listName: string })[]>([]);
@@ -76,12 +76,12 @@ export default function AllWordsClient() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && sourceLanguage) {
       setLoadingWords(true);
       
-      const unsubscribeLists = getLists(user.uid, setLists);
+      const unsubscribeLists = getLists(user.uid, sourceLanguage, setLists);
 
-      getAllWordsFromAllLists(user.uid)
+      getAllWordsFromAllLists(user.uid, sourceLanguage)
         .then(setWords)
         .catch(err => {
           console.error("Error fetching all words:", err);
@@ -97,12 +97,12 @@ export default function AllWordsClient() {
       setWords([]);
       setLists([]);
     }
-  }, [user, toast]);
+  }, [user, toast, sourceLanguage]);
 
   const handleUpdateWordCategory = async (listId: string, wordId: string, category: WordCategory) => {
     if (!user?.uid) return;
     try {
-      await updateWordInList(user.uid, listId, wordId, { category });
+      await updateWordInList(user.uid, sourceLanguage, listId, wordId, { category });
       setWords(prev => prev.map(w => w.id === wordId && w.listId === listId ? { ...w, category } : w));
       toast({ title: "Category Updated", description: "The word's category has been changed." });
     } catch (error: any) {
@@ -115,7 +115,7 @@ export default function AllWordsClient() {
     if (!user?.uid) return;
     const wordToDelete = words.find(w => w.id === wordId && w.listId === listId);
     try {
-      await deleteWordFromList(user.uid, listId, wordId);
+      await deleteWordFromList(user.uid, sourceLanguage, listId, wordId);
       setWords(prev => prev.filter(w => !(w.id === wordId && w.listId === listId)));
       if (wordToDelete) {
         toast({ title: "Word Deleted", description: `"${wordToDelete.word}" has been removed.`, variant: "destructive" });
@@ -134,7 +134,7 @@ export default function AllWordsClient() {
     if (lists.length === 0) {
       toast({ title: t.noLists, description: t.noListsDesc, variant: 'destructive' });
     } else {
-      setEditingWord(null); // Ensure we are not in edit mode
+      setEditingWord(null);
       setIsAddDialogOpen(true);
     }
   };
@@ -178,7 +178,7 @@ export default function AllWordsClient() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="font-headline text-2xl text-primary">{t.allYourWords}</CardTitle>
+              <CardTitle className="font-headline text-2xl text-primary">{t.allYourWords} ({sourceLanguage})</CardTitle>
               <CardDescription>{t.allYourWordsDesc}</CardDescription>
             </div>
             <Button onClick={openAddDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto" disabled={!user}>
@@ -240,11 +240,13 @@ export default function AllWordsClient() {
         </CardContent>
       </Card>
 
-      <AddWordToListDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        listId={listIdForDialog}
-      />
+      {listIdForDialog && 
+        <AddWordToListDialog
+          isOpen={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          listId={listIdForDialog}
+        />
+      }
       
       {editingWord && (
         <EditListWordDialog

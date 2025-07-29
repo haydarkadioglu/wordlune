@@ -46,10 +46,10 @@ const translations = {
 export default function DashboardClient() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { uiLanguage } = useSettings();
+  const { uiLanguage, sourceLanguage, targetLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
-  const [allWords, setAllWords] = useState<ListWord[]>([]);
+  const [allWords, setAllWords] = useState<(ListWord & { listId: string; listName: string; })[]>([]);
   const [loadingWords, setLoadingWords] = useState(true);
   
   const [lists, setLists] = useState<UserList[]>([]);
@@ -59,14 +59,14 @@ export default function DashboardClient() {
   const [listForQuickAdd, setListForQuickAdd] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!db || !user?.uid) {
+    if (!db || !user?.uid || !sourceLanguage) {
         setLoadingWords(false);
         setLoadingLists(false);
         return;
     }
     
     setLoadingWords(true);
-    getAllWordsFromAllLists(user.uid).then(fetchedWords => {
+    getAllWordsFromAllLists(user.uid, sourceLanguage).then(fetchedWords => {
         setAllWords(fetchedWords);
         setLoadingWords(false);
     }).catch(error => {
@@ -76,10 +76,12 @@ export default function DashboardClient() {
     });
 
     setLoadingLists(true);
-    const unsubscribeLists = getLists(user.uid, (fetchedLists) => {
+    const unsubscribeLists = getLists(user.uid, sourceLanguage, (fetchedLists) => {
         setLists(fetchedLists);
         if (fetchedLists.length > 0 && !listForQuickAdd) {
             setListForQuickAdd(fetchedLists[0].id);
+        } else if (fetchedLists.length === 0) {
+            setListForQuickAdd(null);
         }
         setLoadingLists(false);
     });
@@ -87,7 +89,7 @@ export default function DashboardClient() {
     return () => {
       unsubscribeLists();
     }
-  }, [user, toast, listForQuickAdd]);
+  }, [user, toast, sourceLanguage, listForQuickAdd]);
 
   const handleBulkSaveWords = async (processedWords: Omit<ProcessedWord, 'id' | 'createdAt' | 'category'>[]) => {
     if (!user || !user.uid || !db || !listForQuickAdd) {
@@ -96,7 +98,7 @@ export default function DashboardClient() {
     }
 
     try {
-        await addMultipleWordsToList(user.uid, listForQuickAdd, processedWords, 'en');
+        await addMultipleWordsToList(user.uid, sourceLanguage, listForQuickAdd, processedWords, targetLanguage);
         toast({ title: "Words Added", description: `${processedWords.length} words added to your list.` });
     } catch (error: any) {
         console.error("Error bulk saving words: ", error);
