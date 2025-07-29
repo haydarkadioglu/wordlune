@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import type { Story } from "@/types";
-import { getStories } from "@/lib/stories-service";
+import { getPublishedStories } from "@/lib/stories-service";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, BookOpen, ArrowRight, Filter, XCircle, Heart, User } from "lucide-react";
@@ -54,7 +54,8 @@ export default function StoriesClient() {
 
     useEffect(() => {
         setIsLoading(true);
-        const unsubscribe = getStories(sourceLanguage, (fetchedStories) => {
+        // Use the dedicated function for fetching only published stories
+        const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
             setAllStories(fetchedStories);
             setIsLoading(false);
         });
@@ -65,11 +66,11 @@ export default function StoriesClient() {
     const uniqueCategories = useMemo(() => [...new Set(allStories.map(s => s.category).filter(Boolean))], [allStories]);
 
     const filteredStories = useMemo(() => {
+        // No need to filter by isPublished here anymore, as the service function already does it.
         return allStories.filter(story => {
-            const isPublished = story.isPublished;
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
             const categoryMatch = categoryFilter === 'all' || story.category === categoryFilter;
-            return isPublished && levelMatch && categoryMatch;
+            return levelMatch && categoryMatch;
         });
     }, [allStories, levelFilter, categoryFilter]);
     

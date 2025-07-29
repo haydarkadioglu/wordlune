@@ -4,8 +4,8 @@ import type { Story } from '@/types';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firebase/firestore';
 
 /**
- * Fetches all PUBLISHED stories for a specific language and listens for real-time updates.
- * This is used for the main stories page where only published content should be visible.
+ * ADMIN ONLY: Fetches all stories for a specific language (published and drafts) and listens for real-time updates.
+ * This is used for the main admin story management page.
  * @param language The language of the stories to fetch.
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function.
@@ -17,7 +17,46 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
   }
 
   const storiesCollectionRef = collection(db, 'veriler', language, 'stories');
-  // Query only for published stories, ordered by creation date.
+  // Query for all stories, ordered by creation date. Admin needs to see everything.
+  const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
+
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const stories: Story[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      stories.push({ 
+        id: doc.id,
+        ...data,
+        language,
+        createdAt: data.createdAt?.toMillis() || Date.now(),
+        updatedAt: data.updatedAt?.toMillis() || Date.now(),
+      } as Story);
+    });
+    callback(stories);
+  }, (error) => {
+    console.error(`Error fetching all stories for admin in ${language}: `, error);
+    callback([]);
+  });
+
+  return unsubscribe;
+}
+
+
+/**
+ * PUBLIC: Fetches all PUBLISHED stories for a specific language and listens for real-time updates.
+ * This is used for the main stories page where only published content should be visible.
+ * @param language The language of the stories to fetch.
+ * @param callback Function to call with the array of stories.
+ * @returns Unsubscribe function.
+ */
+export function getPublishedStories(language: string, callback: (stories: Story[]) => void) {
+  if (!db || !language) {
+      callback([]);
+      return () => {};
+  }
+
+  const storiesCollectionRef = collection(db, 'veriler', language, 'stories');
+  // Query ONLY for published stories, ordered by creation date.
   const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -34,12 +73,13 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
     });
     callback(stories);
   }, (error) => {
-    console.error(`Error fetching stories for ${language}: `, error);
+    console.error(`Error fetching published stories for ${language}: `, error);
     callback([]);
   });
 
   return unsubscribe;
 }
+
 
 /**
  * Fetches all published stories from non-admin users across all languages for moderation.
