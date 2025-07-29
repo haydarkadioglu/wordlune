@@ -100,6 +100,44 @@ export async function getStoryById(language: string, storyId: string): Promise<S
     return null;
 }
 
+/**
+ * ADMIN ONLY: Creates a new story or updates an existing one.
+ * Bypasses user-specific collections, intended for admin panel use.
+ * @param storyData The data for the story, including language.
+ * @param storyId The ID of the story to update (optional).
+ */
+export async function upsertStory(
+    storyData: Omit<Story, 'id' | 'createdAt' | 'updatedAt'>,
+    storyId?: string
+): Promise<void> {
+    if (!db) throw new Error("Database not available.");
+    
+    const { language, ...dataToSave } = storyData;
+    if (!language) throw new Error("Story language must be provided.");
+
+    const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
+    
+    if (storyId) {
+        // Update existing story
+        const storyDocRef = doc(publicStoryCollectionRef, storyId);
+        await updateDoc(storyDocRef, { ...dataToSave, updatedAt: serverTimestamp() });
+    } else {
+        // Create new story with default values for admin-added content
+        const newStoryPayload = {
+            ...dataToSave,
+            authorId: 'admin',
+            authorName: 'WordLune Team',
+            authorPhotoURL: '',
+            isPublished: true, // Admin stories are published by default
+            likeCount: 0,
+            commentCount: 0,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+        await addDoc(publicStoryCollectionRef, newStoryPayload);
+    }
+}
+
 
 /**
  * Creates a new story or updates an existing one for a specific user.
@@ -170,9 +208,11 @@ export async function deleteStory(story: Story): Promise<void> {
     const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
     batch.delete(publicStoryDocRef);
     
-    // Reference to the author's story document (if it exists)
-    const authorStoryDocRef = doc(db, 'stories_by_author', story.authorId, 'stories', story.id);
-    batch.delete(authorStoryDocRef);
+    // Reference to the author's story document (if it exists and author is not admin)
+    if (story.authorId !== 'admin') {
+      const authorStoryDocRef = doc(db, 'stories_by_author', story.authorId, 'stories', story.id);
+      batch.delete(authorStoryDocRef);
+    }
     
     await batch.commit();
 }

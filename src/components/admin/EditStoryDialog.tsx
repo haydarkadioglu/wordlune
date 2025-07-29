@@ -77,7 +77,11 @@ export default function EditStoryDialog({ isOpen, onOpenChange, story }: EditSto
   const onSubmit = async (values: StoryFormData) => {
     setIsSubmitting(true);
     try {
-        await upsertStory(values, story?.id);
+        // The admin dialog doesn't need to pass a complete Story object,
+        // as the upsertStory function will fill in the admin-specific defaults.
+        const storyDataForUpsert = values as Omit<Story, 'id' | 'createdAt' | 'updatedAt'>;
+        
+        await upsertStory(storyDataForUpsert, story?.id);
         toast({
             title: isEditing ? "Story Updated!" : "Story Created!",
             description: `The story "${values.title}" has been saved.`,
