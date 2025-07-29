@@ -16,7 +16,7 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
       return () => {};
   }
 
-  const storiesCollectionRef = collection(db, 'veriler', language, 'stories');
+  const storiesCollectionRef = collection(db, 'stories', language, 'stories');
   // Query for all stories, ordered by creation date. Admin needs to see everything.
   const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
 
@@ -55,7 +55,7 @@ export function getPublishedStories(language: string, callback: (stories: Story[
       return () => {};
   }
 
-  const storiesCollectionRef = collection(db, 'veriler', language, 'stories');
+  const storiesCollectionRef = collection(db, 'stories', language, 'stories');
   // Query ONLY for published stories, ordered by creation date.
   const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
@@ -105,6 +105,9 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
         const stories: Story[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
+            // The parent of a subcollection doc is the document containing it.
+            // The parent of that document is the collection containing it.
+            // So doc.ref.parent.parent.id should be the language.
             const language = doc.ref.parent.parent?.id; 
             if (language) {
                 stories.push({
@@ -172,7 +175,7 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
  */
 export async function getStoryById(language: string, storyId: string): Promise<Story | null> {
     if (!db || !language) return null;
-    const storyDocRef = doc(db, 'veriler', language, 'stories', storyId);
+    const storyDocRef = doc(db, 'stories', language, 'stories', storyId);
     const docSnap = await getDoc(storyDocRef);
     if(docSnap.exists()){
         const data = docSnap.data();
@@ -201,7 +204,7 @@ export async function upsertStory(
     const { language, ...dataToSave } = storyData;
     if (!language) throw new Error("Story language must be provided.");
 
-    const publicStoryCollectionRef = collection(db, 'veriler', language, 'stories');
+    const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
     
     if (storyId) {
         const storyDocRef = doc(publicStoryCollectionRef, storyId);
@@ -241,7 +244,7 @@ export async function upsertUserStory(
     const { language, ...dataToSave } = storyData;
     if (!language) throw new Error("Story language must be provided.");
 
-    const publicStoryCollectionRef = collection(db, 'veriler', language, 'stories');
+    const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
     const authorStoryCollectionRef = collection(db, 'stories_by_author', userId, 'stories');
     
     const batch = writeBatch(db);
@@ -285,7 +288,7 @@ export async function deleteStory(story: Story): Promise<void> {
 
     const batch = writeBatch(db);
     
-    const publicStoryDocRef = doc(db, 'veriler', story.language, 'stories', story.id);
+    const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
     batch.delete(publicStoryDocRef);
     
     if (story.authorId !== 'admin') {
