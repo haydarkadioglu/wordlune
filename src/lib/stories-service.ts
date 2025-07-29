@@ -100,7 +100,7 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
 
     const storiesQuery = query(
         collection(db, 'stories_by_author', authorId, 'stories'),
-        orderBy('createdAt', 'desc')
+        orderBy('updatedAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(storiesQuery, (querySnapshot) => {
@@ -271,5 +271,3 @@ export async function deleteUserStory(userId: string, story: Story): Promise<voi
     
     await deleteStory(story);
 }
-
-    

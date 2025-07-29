@@ -1,92 +1,68 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // --- Public read, restricted write collections ---
 
-    // Public user information (username -> uid mapping)
+    // --- USER DATA (Private) ---
+    // Users can only access their own data folder, which contains their word lists.
+    match /data/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- USERNAMES (Public Read, Private Write) ---
+    // Anyone can read to check for username existence.
+    // User can create their username mapping upon registration.
+    // User can update their own username mapping (via transaction).
     match /usernames/{username} {
       allow read: if true;
-      // Allow create only during user registration (handled by backend logic)
-      // Allow update/delete only through our transactional `updateUsername` function
-      allow write: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
     
-    // Admins list
-    match /admins/{userId} {
-      allow read: if request.auth != null; // Only authenticated users can check admin status
-      allow write: if false; // Managed manually in console
-    }
-    
-    // App versions or public config
-    match /versions/{docId} {
-        allow read: if true;
-        allow write: if false; // Managed manually in console
-    }
-    
-    // --- User-specific private data ---
-
-    // User's own profile information
+    // --- USER PROFILES (Private) ---
+    // Users can only read and update their own profile.
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // User's private login history
-    match /users/{userId}/loginHistory/{logId} {
-      allow read: if request.auth.uid == userId;
-      allow write: if request.auth.uid == userId;
-    }
-    
-    // User's private data container (lists, words etc.)
-    match /data/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
-    }
-
-    // --- Stories ---
-    
-    // Helper function to check if a user is banned
-    function isBanned(userId) {
-      let banDoc = get(/databases/$(database)/documents/user_bans/$(userId)).data;
-      if (banDoc == null) {
-        return false; // Not banned
-      }
-      if (banDoc.isPermanent == true) {
-        return true; // Permanently banned
-      }
-      if (banDoc.bannedUntil != null && banDoc.bannedUntil > request.time) {
-        return true; // Temporarily banned
-      }
-      return false; // Ban expired
+    // --- PUBLIC STORIES ---
+    // This is the main collection for all stories shown to the community.
+    match /veriler/{language}/stories/{storyId} {
+      // Anyone can read a story if it is published.
+      allow read: if resource.data.isPublished == true;
+      
+      // Logged-in, non-banned users can create stories.
+      allow create: if request.auth != null && !exists(/databases/$(database)/documents/user_bans/$(request.auth.uid));
+      
+      // Users can only update/delete their own stories and must not be banned.
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId && !exists(/databases/$(database)/documents/user_bans/$(request.auth.uid));
     }
 
-    // Public stories, grouped by language
-    match /stories/{language}/stories/{storyId} {
-      allow read: if resource.data.isPublished == true || (request.auth != null && request.auth.uid == resource.data.authorId);
-      allow create: if request.auth != null && !isBanned(request.auth.uid);
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId && !isBanned(request.auth.uid);
-    }
-    
-    // User's private index of their own stories
+    // --- STORIES BY AUTHOR (Private user collection) ---
+    // This collection is for users to manage their own stories (drafts included).
     match /stories_by_author/{userId}/stories/{storyId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && !isBanned(userId);
+        // A user can perform any action (read, write, delete) only on their own stories collection.
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // --- Moderation ---
-    
-    // User ban records
+    // --- ADMINS (Read-only for clients) ---
+    // Determines who has admin privileges. Only backend processes should write here.
+    match /admins/{userId} {
+      allow read: if true;
+      allow write: if false; // Should be managed from server-side or console
+    }
+
+    // --- USER BANS (Read-only for clients) ---
+    // Manages user bans. Only backend/admin processes should write here.
     match /user_bans/{userId} {
-        // Only admins should be able to read or write ban records.
-        // This relies on a custom claim or an 'admins' collection check.
-        // Assuming an 'admins' collection for this rule.
-        allow read, write: if exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if true;
+      allow write: if false; // Should be managed by admins via trusted environment
+    }
+    
+    // --- VERSIONS (Public Read) ---
+    // Used for app versioning, like Android app link.
+    match /versions/{versionId} {
+      allow read: if true;
     }
   }
 }
