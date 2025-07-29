@@ -251,17 +251,14 @@ export async function upsertUserStory(
     if (!language) throw new Error("Story language must be provided.");
 
     const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
-    const authorStoryCollectionRef = collection(db, 'stories_by_author', userId, 'stories');
     
     const batch = writeBatch(db);
 
     if (storyId) {
         const publicStoryDocRef = doc(publicStoryCollectionRef, storyId);
-        const authorStoryDocRef = doc(authorStoryCollectionRef, storyId);
         const updatePayload = { ...dataToSave, updatedAt: serverTimestamp() };
         
         batch.update(publicStoryDocRef, updatePayload);
-        batch.update(authorStoryDocRef, updatePayload);
 
     } else {
         const newStoryPayload = {
@@ -273,10 +270,8 @@ export async function upsertUserStory(
             updatedAt: serverTimestamp(),
         };
         const newPublicDocRef = doc(publicStoryCollectionRef);
-        const authorStoryDocRef = doc(authorStoryCollectionRef, newPublicDocRef.id);
         
         batch.set(newPublicDocRef, newStoryPayload);
-        batch.set(authorStoryDocRef, newStoryPayload);
     }
 
     await batch.commit();
@@ -296,11 +291,6 @@ export async function deleteStory(story: Story): Promise<void> {
     
     const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
     batch.delete(publicStoryDocRef);
-    
-    if (story.authorId !== 'admin') {
-      const authorStoryDocRef = doc(db, 'stories_by_author', story.authorId, 'stories', story.id);
-      batch.delete(authorStoryDocRef);
-    }
     
     await batch.commit();
 }

@@ -1,66 +1,66 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- User Data: Lists and Words ---
+
+    // --- User Data Rules ---
     // Users can only access their own data container.
     match /data/{userId} {
       allow read, write: if request.auth.uid == userId;
-      
-      // A user can manage lists (create, update, delete) under their own data document.
-      match /{language}/{listId} {
-        allow read, write: if request.auth.uid == userId;
 
-        // A user can manage words within their own lists.
-        match /words/{wordId} {
-          allow read, write: if request.auth.uid == userId;
-        }
+      // Any user can read/write their own lists and words.
+      match /{language}/{listId}/{document=**} {
+        allow read, write: if request.auth.uid == userId;
       }
     }
 
-    // --- User Management: Public usernames and private profiles ---
+    // --- Public User Profiles ---
+    // Anyone can read a user's public profile.
+    // Only the user can create or update their own profile.
     match /users/{userId} {
-      allow read: if request.auth.uid != null;
-      allow write: if request.auth.uid == userId;
+      allow read: if true;
+      allow create, update: if request.auth.uid == userId;
     }
+
+    // --- Username Uniqueness ---
+    // Anyone can read a username to check for existence.
+    // A user can only create a username document linked to their own UID.
+    // A user can only delete their own old username document (as part of a transaction).
     match /usernames/{username} {
-      allow read: if request.auth.uid != null;
-      allow create: if request.auth.uid != null;
-      allow delete, update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
+      allow read: if true;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow delete: if request.auth.uid == get(/databases/$(database)/documents/usernames/$(username)).data.userId;
     }
     
-    // --- Stories: Public and author-specific collections ---
+    // --- Admin Rules ---
+    // This rule is simple: if a user's UID is in the 'admins' collection, they are an admin.
+    // Admins can read any document in the database. This rule is broad and should be used with caution.
+    // For write access, specific rules per collection are still required.
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
 
-    // Public stories collection (accessible by anyone for reading published content)
+    // --- Story Rules ---
+    // Public stories collection.
     match /stories/{language}/stories/{storyId} {
-      allow read: if resource.data.isPublished == true || request.auth.uid == resource.data.authorId;
-      allow create: if request.auth.uid != null;
-      allow update: if request.auth.uid == resource.data.authorId;
-      // Deletion is implicitly handled by the user deleting their own copy from stories_by_author.
-      // The client-side batch write will fail if the stories_by_author deletion fails.
-      allow delete: if request.auth.uid == get(/databases/$(database)/documents/stories/$(language)/stories/$(storyId)).data.authorId;
-    }
-    
-    // Author-specific stories collection (only accessible by the author)
-    match /stories_by_author/{authorId}/stories/{storyId} {
-      allow read, create, update: if request.auth.uid == authorId;
-      // This rule is reliable because it uses the wildcard {authorId} from the path.
-      allow delete: if request.auth.uid == authorId;
-    }
-    
-    // Rule for CollectionGroup queries on "stories"
-    match /{path=**}/stories/{storyId} {
-      allow read: if request.auth.uid == resource.data.authorId;
-    }
+      // Anyone can read a published story.
+      allow read: if resource.data.isPublished == true || (request.auth.uid != null && request.auth.uid == resource.data.authorId);
 
-    // --- Admin and Moderation ---
-    match /admins/{userId} {
-        allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
+      // Logged-in users can create stories.
+      allow create: if request.auth.uid != null;
+
+      // Users can only update their own stories.
+      allow update: if request.auth.uid == resource.data.authorId;
+
+      // An admin can delete any story. A user can delete their own story.
+      allow delete: if isAdmin() || (request.auth.uid != null && get(/databases/$(database)/documents/stories/$(language)/stories/$(storyId)).data.authorId == request.auth.uid);
     }
     
-    match /user_bans/{userId} {
-      allow read: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
-      allow write: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
+    // --- Collection Group Rules for Stories ---
+    // This allows a user to query across all languages to find their own stories for the profile page.
+    match /{path=**}/stories/{storyId} {
+       allow read: if request.auth.uid != null && get(/databases/$(database)/documents/$(path)/stories/$(storyId)).data.authorId == request.auth.uid;
     }
   }
 }
