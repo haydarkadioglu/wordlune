@@ -56,11 +56,11 @@ export default function SettingsForm() {
   };
 
   useEffect(() => {
-    if (user) {
-      const unsubscribe = getLists(user.uid, setLists);
+    if (user && sourceLanguage) {
+      const unsubscribe = getLists(user.uid, sourceLanguage, setLists);
       return () => unsubscribe();
     }
-  }, [user]);
+  }, [user, sourceLanguage]);
 
   const handleSave = () => {
     toast({
