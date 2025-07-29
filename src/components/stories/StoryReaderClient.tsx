@@ -34,7 +34,7 @@ const Word = ({ children, storyTitle, storyLanguage }: { children: string, story
     const [translationResult, setTranslationResult] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-    const { targetLanguage, storyListId, setStoryListId } = useSettings();
+    const { targetLanguage, storyListId, setStoryListId } from useSettings();
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -196,9 +196,9 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
     const [story, setStory] = useState<Story | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const searchParams = useSearchParams();
-    const lang = searchParams.get('lang');
 
     useEffect(() => {
+        const lang = searchParams.get('lang');
         if (storyId && lang) {
             setIsLoading(true);
             getStoryById(lang, storyId).then(fetchedStory => {
@@ -207,7 +207,7 @@ export default function StoryReaderClient({ storyId }: StoryReaderClientProps) {
                 setIsLoading(false);
             });
         }
-    }, [storyId, lang]);
+    }, [storyId, searchParams]);
 
     const renderStoryContent = () => {
         if (!story?.content) return null;
