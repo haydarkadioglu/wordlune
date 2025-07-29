@@ -16,6 +16,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [targetLanguage, setTargetLanguageState] = useState<string>('Turkish');
   const [uiLanguage, setUiLanguageState] = useState<string>('en');
   const [storyListId, setStoryListIdState] = useState<string>('');
+  const [lastSelectedListId, setLastSelectedListIdState] = useState<string>('');
   const [theme, setThemeState] = useState<string>('light');
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -24,12 +25,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const savedTarget = localStorage.getItem('targetLanguage');
     const savedUiLang = localStorage.getItem('uiLanguage');
     const savedStoryListId = localStorage.getItem('storyListId');
+    const savedLastListId = localStorage.getItem('lastSelectedListId');
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedSource) setSourceLanguageState(savedSource);
     if (savedTarget) setTargetLanguageState(savedTarget);
     if (savedStoryListId) setStoryListIdState(savedStoryListId);
+    if (savedLastListId) setLastSelectedListIdState(savedLastListId);
     if (savedUiLang) {
         setUiLanguageState(savedUiLang);
         document.documentElement.lang = savedUiLang;
@@ -79,6 +82,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('storyListId', listId);
     setStoryListIdState(listId);
   }
+  
+  const setLastSelectedListId = (listId: string) => {
+    localStorage.setItem('lastSelectedListId', listId);
+    setLastSelectedListIdState(listId);
+  }
 
   const setTheme = (newTheme: string) => {
     setThemeState(newTheme);
@@ -97,10 +105,12 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     setUiLanguage,
     storyListId,
     setStoryListId,
+    lastSelectedListId,
+    setLastSelectedListId,
     theme,
     setTheme,
     toggleTheme,
-  }), [sourceLanguage, targetLanguage, uiLanguage, storyListId, theme]);
+  }), [sourceLanguage, targetLanguage, uiLanguage, storyListId, lastSelectedListId, theme]);
 
   if (!isLoaded) {
     return null; 

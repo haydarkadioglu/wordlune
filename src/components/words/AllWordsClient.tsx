@@ -54,7 +54,7 @@ const allCategories: WordCategory[] = ['All', 'Very Good', 'Good', 'Bad', 'Repea
 export default function AllWordsClient() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { uiLanguage, sourceLanguage } = useSettings();
+  const { uiLanguage, sourceLanguage, lastSelectedListId, setLastSelectedListId } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const [words, setWords] = useState<(ListWord & { listId: string; listName: string })[]>([]);
@@ -79,7 +79,12 @@ export default function AllWordsClient() {
     if (user?.uid && sourceLanguage) {
       setLoadingWords(true);
       
-      const unsubscribeLists = getLists(user.uid, sourceLanguage, setLists);
+      const unsubscribeLists = getLists(user.uid, sourceLanguage, (fetchedLists) => {
+        setLists(fetchedLists);
+        if (fetchedLists.length > 0 && !lastSelectedListId) {
+            setLastSelectedListId(fetchedLists[0].id);
+        }
+      });
 
       getAllWordsFromAllLists(user.uid, sourceLanguage)
         .then(setWords)
@@ -97,7 +102,7 @@ export default function AllWordsClient() {
       setWords([]);
       setLists([]);
     }
-  }, [user, toast, sourceLanguage]);
+  }, [user, toast, sourceLanguage, lastSelectedListId, setLastSelectedListId]);
 
   const handleUpdateWordCategory = async (listId: string, wordId: string, category: WordCategory) => {
     if (!user?.uid) return;
@@ -170,8 +175,6 @@ export default function AllWordsClient() {
     return <WordTable words={filteredWords} />;
   }
   
-  const listIdForDialog = lists.length > 0 ? lists[0].id : '';
-
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
@@ -240,11 +243,13 @@ export default function AllWordsClient() {
         </CardContent>
       </Card>
 
-      {listIdForDialog && 
+      {lastSelectedListId && 
         <AddWordToListDialog
           isOpen={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
-          listId={listIdForDialog}
+          listId={lastSelectedListId}
+          lists={lists}
+          onListChange={setLastSelectedListId}
         />
       }
       

@@ -58,15 +58,13 @@ type BulkAddFormData = z.infer<ReturnType<typeof getBulkAddSchema>>;
 
 interface BulkAddWordsProps {
   onBulkSave: (words: any[]) => Promise<void>;
-  listId: string | null;
   lists: UserList[];
-  setListId: (id: string) => void;
 }
 
-export default function BulkAddWords({ onBulkSave, listId, lists, setListId }: BulkAddWordsProps) {
+export default function BulkAddWords({ onBulkSave, lists }: BulkAddWordsProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { sourceLanguage, targetLanguage, uiLanguage } = useSettings();
+  const { sourceLanguage, targetLanguage, uiLanguage, lastSelectedListId, setLastSelectedListId } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<BulkAddFormData>({
@@ -74,7 +72,7 @@ export default function BulkAddWords({ onBulkSave, listId, lists, setListId }: B
   });
 
   const onSubmit = async (data: BulkAddFormData) => {
-    if (!listId) {
+    if (!lastSelectedListId) {
       toast({ title: t.noListSelected, description: t.noListDesc, variant: 'destructive' });
       return;
     }
@@ -129,7 +127,7 @@ export default function BulkAddWords({ onBulkSave, listId, lists, setListId }: B
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Select value={listId ?? ""} onValueChange={setListId}>
+          <Select value={lastSelectedListId ?? ""} onValueChange={setLastSelectedListId}>
               <SelectTrigger>
                   <SelectValue placeholder={t.selectList} />
               </SelectTrigger>
@@ -148,7 +146,7 @@ export default function BulkAddWords({ onBulkSave, listId, lists, setListId }: B
             />
             {errors.words && <p className="text-sm text-destructive mt-1">{errors.words.message}</p>}
           </div>
-          <Button type="submit" disabled={isProcessing || !listId} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
+          <Button type="submit" disabled={isProcessing || !lastSelectedListId} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
             {t.buttonText}
           </Button>

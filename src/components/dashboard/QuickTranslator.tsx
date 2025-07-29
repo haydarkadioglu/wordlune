@@ -64,27 +64,17 @@ type TranslateFormData = z.infer<ReturnType<typeof getTranslateSchema>>;
 
 interface QuickTranslatorProps {
     onAddWord: (word: string, meaning: string) => void;
-    listId: string | null;
     lists: UserList[];
-    setListId: (id: string) => void;
 }
 
-export default function QuickTranslator({ onAddWord, listId, lists, setListId }: QuickTranslatorProps) {
+export default function QuickTranslator({ onAddWord, lists }: QuickTranslatorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [translationsResult, setTranslationsResult] = useState<string[]>([]);
   const { toast } = useToast();
   const settings = useSettings();
-  const { uiLanguage } = settings;
+  const { uiLanguage, sourceLanguage, targetLanguage, lastSelectedListId, setLastSelectedListId } = settings;
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
-  const [localSourceLanguage, setLocalSourceLanguage] = useState(settings.sourceLanguage);
-  const [localTargetLanguage, setLocalTargetLanguage] = useState(settings.targetLanguage);
-
-  useEffect(() => {
-    setLocalSourceLanguage(settings.sourceLanguage);
-    setLocalTargetLanguage(settings.targetLanguage);
-  }, [settings.sourceLanguage, settings.targetLanguage]);
-  
   const { register, handleSubmit, formState: { errors }, getValues } = useForm<TranslateFormData>({
     resolver: zodResolver(getTranslateSchema(uiLanguage as 'en' | 'tr')),
   });
@@ -95,8 +85,8 @@ export default function QuickTranslator({ onAddWord, listId, lists, setListId }:
     try {
       const result = await translateWord({ 
         word: data.word, 
-        sourceLanguage: localSourceLanguage,
-        targetLanguage: localTargetLanguage 
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage 
       });
       if (result.translations && result.translations.length > 0) {
         setTranslationsResult(result.translations);
@@ -119,14 +109,8 @@ export default function QuickTranslator({ onAddWord, listId, lists, setListId }:
     }
   };
 
-  const handleSwapLanguages = () => {
-    const temp = localSourceLanguage;
-    setLocalSourceLanguage(localTargetLanguage);
-    setLocalTargetLanguage(temp);
-  };
-
   const handleAddClick = (meaning: string) => {
-    if (!listId) {
+    if (!lastSelectedListId) {
         toast({ title: t.noListSelected, description: t.noListDesc, variant: 'destructive' });
         return;
     }
@@ -145,7 +129,7 @@ export default function QuickTranslator({ onAddWord, listId, lists, setListId }:
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Select value={listId ?? ""} onValueChange={setListId}>
+        <Select value={lastSelectedListId ?? ""} onValueChange={setLastSelectedListId}>
             <SelectTrigger>
                 <SelectValue placeholder={t.selectList} />
             </SelectTrigger>
@@ -156,43 +140,11 @@ export default function QuickTranslator({ onAddWord, listId, lists, setListId }:
             </SelectContent>
         </Select>
 
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <div className="w-full sm:flex-1">
-             <Select value={localSourceLanguage} onValueChange={setLocalSourceLanguage}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t.from} />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LANGUAGES.map(lang => (
-                    <SelectItem key={`source-${lang}`} value={lang}>{lang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-          </div>
-
-          <Button variant="ghost" size="icon" onClick={handleSwapLanguages} className="text-primary hover:text-accent flex-shrink-0" aria-label={t.swapLanguages}>
-            <ArrowRightLeft className="h-5 w-5" />
-          </Button>
-
-          <div className="w-full sm:flex-1">
-             <Select value={localTargetLanguage} onValueChange={setLocalTargetLanguage}>
-              <SelectTrigger>
-                <SelectValue placeholder={t.to} />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_LANGUAGES.map(lang => (
-                  <SelectItem key={`target-${lang}`} value={lang}>{lang}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
         <form onSubmit={handleSubmit(handleTranslate)} className="flex items-start gap-4">
           <div className="flex-grow">
             <Input 
               {...register('word')} 
-              placeholder={t.placeholder(localSourceLanguage)}
+              placeholder={t.placeholder(sourceLanguage)}
               className="text-base"
             />
             {errors.word && <p className="text-sm text-destructive mt-1">{errors.word.message}</p>}
@@ -205,7 +157,7 @@ export default function QuickTranslator({ onAddWord, listId, lists, setListId }:
 
         {translationsResult.length > 0 && (
           <div className="mt-2">
-            <h4 className="font-semibold text-lg text-foreground mb-3">{t.translationsFor(getValues('word'), localTargetLanguage)}</h4>
+            <h4 className="font-semibold text-lg text-foreground mb-3">{t.translationsFor(getValues('word'), targetLanguage)}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {translationsResult.map((meaning, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">

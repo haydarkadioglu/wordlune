@@ -18,7 +18,7 @@ import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
 import { translateWord } from '@/ai/flows/translate-word-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { WordCategory } from '@/types';
+import type { WordCategory, UserList } from '@/types';
 
 const translations = {
   en: {
@@ -33,6 +33,7 @@ const translations = {
     exampleRequired: 'Example sentence is required.',
     categoryLabel: 'Category',
     targetLanguageLabel: 'Translate To',
+    listLabel: 'Add to List',
     cancel: 'Cancel',
     addWord: 'Add Word',
     generate: 'Generate',
@@ -58,6 +59,7 @@ const translations = {
     exampleRequired: 'Örnek cümle zorunludur.',
     categoryLabel: 'Kategori',
     targetLanguageLabel: 'Çeviri Dili',
+    listLabel: 'Listeye Ekle',
     cancel: 'İptal',
     addWord: 'Kelime Ekle',
     generate: 'Oluştur',
@@ -92,18 +94,20 @@ interface AddWordToListDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   listId: string;
+  lists: UserList[];
+  onListChange: (listId: string) => void;
+  preFilledData?: Partial<Pick<FormData, 'word' | 'meaning'>>;
 }
 
-export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: AddWordToListDialogProps) {
+export default function AddWordToListDialog({ isOpen, onOpenChange, listId, lists, onListChange, preFilledData }: AddWordToListDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { sourceLanguage, targetLanguage, uiLanguage } = useSettings();
+  const { sourceLanguage, targetLanguage, setTargetLanguage, uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isGeneratingExample, setIsGeneratingExample] = useState(false);
-  const [dialogTargetLanguage, setDialogTargetLanguage] = useState(targetLanguage);
 
   const form = useForm<FormData>({
     resolver: zodResolver(getFormSchema(uiLanguage as 'en' | 'tr')),
@@ -119,12 +123,17 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
 
   useEffect(() => {
     if (isOpen) {
-      setDialogTargetLanguage(targetLanguage);
+      const defaultValues = {
+        word: "",
+        meaning: "",
+        example: "",
+        category: 'Uncategorized' as WordCategory
+      };
+      form.reset({ ...defaultValues, ...preFilledData });
     } else {
-      // Reset form when dialog closes
       form.reset();
     }
-  }, [isOpen, targetLanguage, form]);
+  }, [isOpen, preFilledData, form]);
 
   const onSubmit = async (values: FormData) => {
     if (!user || !listId) {
@@ -135,8 +144,11 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
     setIsSubmitting(true);
     try {
       await addWordToList(user.uid, sourceLanguage, listId, {
-        ...values,
-        language: dialogTargetLanguage,
+        word: values.word,
+        meaning: values.meaning,
+        example: values.example,
+        category: values.category,
+        language: targetLanguage,
       });
       toast({
         title: "Success!",
@@ -176,7 +188,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
                 throw new Error(t.aiError);
             }
         } else { // translate
-            const result = await translateWord({ word: wordText, sourceLanguage, targetLanguage: dialogTargetLanguage });
+            const result = await translateWord({ word: wordText, sourceLanguage, targetLanguage });
             const meaning = result.translations?.join(', ');
              if (meaning) {
                 form.setValue('meaning', meaning, { shouldValidate: true });
@@ -220,6 +232,19 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
           <div>
+            <Label htmlFor="list">{t.listLabel}</Label>
+            <Select value={listId} onValueChange={onListChange}>
+              <SelectTrigger id="list" className="w-full mt-1">
+                <SelectValue placeholder="Select a list" />
+              </SelectTrigger>
+              <SelectContent>
+                {lists.map((list) => (
+                  <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="word">{t.wordLabel}</Label>
             <Input id="word" {...form.register('word')} placeholder={t.wordPlaceholder} />
             {form.formState.errors.word && (
@@ -240,7 +265,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
               </div>
               <div className="space-y-1">
                  <Label htmlFor="target-language">{t.targetLanguageLabel}</Label>
-                 <Select value={dialogTargetLanguage} onValueChange={setDialogTargetLanguage}>
+                 <Select value={targetLanguage} onValueChange={setTargetLanguage}>
                     <SelectTrigger id="target-language">
                         <SelectValue placeholder="Select language" />
                     </SelectTrigger>

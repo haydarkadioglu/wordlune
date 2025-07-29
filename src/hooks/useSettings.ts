@@ -20,6 +20,8 @@ export interface SettingsContextType {
   setUiLanguage: (lang: string) => void;
   storyListId: string;
   setStoryListId: (listId: string) => void;
+  lastSelectedListId: string;
+  setLastSelectedListId: (listId: string) => void;
   theme: string;
   setTheme: (theme: string) => void;
   toggleTheme: () => void;

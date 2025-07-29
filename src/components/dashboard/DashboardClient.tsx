@@ -46,7 +46,7 @@ const translations = {
 export default function DashboardClient() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { uiLanguage, sourceLanguage, targetLanguage } = useSettings();
+  const { uiLanguage, sourceLanguage, targetLanguage, lastSelectedListId, setLastSelectedListId } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const [allWords, setAllWords] = useState<(ListWord & { listId: string; listName: string; })[]>([]);
@@ -56,7 +56,7 @@ export default function DashboardClient() {
   const [loadingLists, setLoadingLists] = useState(true);
 
   const [isAddWordDialogOpen, setIsAddWordDialogOpen] = useState(false);
-  const [listForQuickAdd, setListForQuickAdd] = useState<string | null>(null);
+  const [wordToAdd, setWordToAdd] = useState<{word: string; meaning: string} | null>(null);
 
   useEffect(() => {
     if (!db || !user?.uid || !sourceLanguage) {
@@ -78,10 +78,10 @@ export default function DashboardClient() {
     setLoadingLists(true);
     const unsubscribeLists = getLists(user.uid, sourceLanguage, (fetchedLists) => {
         setLists(fetchedLists);
-        if (fetchedLists.length > 0 && !listForQuickAdd) {
-            setListForQuickAdd(fetchedLists[0].id);
+        if (fetchedLists.length > 0 && !lastSelectedListId) {
+            setLastSelectedListId(fetchedLists[0].id);
         } else if (fetchedLists.length === 0) {
-            setListForQuickAdd(null);
+            setLastSelectedListId('');
         }
         setLoadingLists(false);
     });
@@ -89,16 +89,16 @@ export default function DashboardClient() {
     return () => {
       unsubscribeLists();
     }
-  }, [user, toast, sourceLanguage, listForQuickAdd]);
+  }, [user, toast, sourceLanguage, lastSelectedListId, setLastSelectedListId]);
 
   const handleBulkSaveWords = async (processedWords: Omit<ProcessedWord, 'id' | 'createdAt' | 'category'>[]) => {
-    if (!user || !user.uid || !db || !listForQuickAdd) {
+    if (!user || !user.uid || !db || !lastSelectedListId) {
       toast({ title: "Error", description: "You must select a list to save words.", variant: "destructive" });
       return;
     }
 
     try {
-        await addMultipleWordsToList(user.uid, sourceLanguage, listForQuickAdd, processedWords, targetLanguage);
+        await addMultipleWordsToList(user.uid, sourceLanguage, lastSelectedListId, processedWords, targetLanguage);
         toast({ title: "Words Added", description: `${processedWords.length} words added to your list.` });
     } catch (error: any) {
         console.error("Error bulk saving words: ", error);
@@ -107,13 +107,13 @@ export default function DashboardClient() {
   };
 
   const handleAddFromTranslator = useCallback((word: string, meaning: string) => {
-    if (!listForQuickAdd) {
+    if (!lastSelectedListId) {
         toast({ title: "No List Selected", description: "Please select a list before adding a word.", variant: "destructive"});
         return;
     }
-    // This will open the dialog with the correct listId pre-selected
+    setWordToAdd({ word, meaning });
     setIsAddWordDialogOpen(true);
-  }, [listForQuickAdd, toast]);
+  }, [lastSelectedListId, toast]);
 
   if (!db) {
     return (
@@ -136,18 +136,21 @@ export default function DashboardClient() {
           <ListsShortcut lists={lists} isLoading={loadingLists} />
         </div>
         <div className="lg:col-span-2 grid grid-cols-1 gap-8">
-          <QuickTranslator onAddWord={handleAddFromTranslator} listId={listForQuickAdd} lists={lists} setListId={setListForQuickAdd} />
-          <BulkAddWords onBulkSave={handleBulkSaveWords} listId={listForQuickAdd} lists={lists} setListId={setListForQuickAdd} />
+          <QuickTranslator onAddWord={handleAddFromTranslator} lists={lists} />
+          <BulkAddWords onBulkSave={handleBulkSaveWords} lists={lists} />
         </div>
       </div>
       
       <WeeklyWordsChart allWords={allWords} />
 
-      {listForQuickAdd && (
+      {lastSelectedListId && (
           <AddWordToListDialog
             isOpen={isAddWordDialogOpen}
             onOpenChange={setIsAddWordDialogOpen}
-            listId={listForQuickAdd}
+            listId={lastSelectedListId}
+            lists={lists}
+            preFilledData={wordToAdd ? { word: wordToAdd.word, meaning: wordToAdd.meaning } : {}}
+            onListChange={setLastSelectedListId}
           />
       )}
     </div>
