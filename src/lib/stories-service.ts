@@ -131,6 +131,7 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
 
 /**
  * Fetches all stories (published and drafts) by a specific author. Used for the profile page.
+ * This uses a collectionGroup query to reliably get all stories across all language collections.
  * @param authorId The ID of the author.
  * @param callback Function to call with the array of stories.
  * @returns Unsubscribe function.
@@ -142,7 +143,8 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
     }
 
     const storiesQuery = query(
-        collection(db, 'stories_by_author', authorId, 'stories'),
+        collectionGroup(db, 'stories'),
+        where('authorId', '==', authorId),
         orderBy('updatedAt', 'desc')
     );
 
@@ -150,13 +152,16 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
         const stories: Story[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            stories.push({
-                id: doc.id,
-                ...data,
-                language: data.language, // Ensure language is included from the document data
-                createdAt: data.createdAt, // Keep as Firestore Timestamp
-                updatedAt: data.updatedAt, // Keep as Firestore Timestamp
-            } as Story);
+            const language = doc.ref.parent.parent?.id;
+            if (language) {
+                 stories.push({
+                    id: doc.id,
+                    ...data,
+                    language: language,
+                    createdAt: data.createdAt, // Keep as Firestore Timestamp
+                    updatedAt: data.updatedAt, // Keep as Firestore Timestamp
+                } as Story);
+            }
         });
         callback(stories);
     }, (error) => {
