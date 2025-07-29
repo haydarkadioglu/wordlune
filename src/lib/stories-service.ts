@@ -1,7 +1,7 @@
 
 import { db, isFirebaseReady } from '@/lib/firebase';
 import type { Story } from '@/types';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, where, writeBatch, collectionGroup } from 'firestore';
 
 /**
  * ADMIN ONLY: Fetches all stories for a specific language (published and drafts) and listens for real-time updates.
@@ -28,8 +28,8 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
         id: doc.id,
         ...data,
         language,
-        createdAt: data.createdAt?.toMillis() || Date.now(),
-        updatedAt: data.updatedAt?.toMillis() || Date.now(),
+        createdAt: data.createdAt, // Keep as Timestamp
+        updatedAt: data.updatedAt, // Keep as Timestamp
       } as Story);
     });
     callback(stories);
@@ -67,8 +67,8 @@ export function getPublishedStories(language: string, callback: (stories: Story[
         id: doc.id,
         ...data,
         language,
-        createdAt: data.createdAt?.toMillis() || Date.now(),
-        updatedAt: data.updatedAt?.toMillis() || Date.now(),
+        createdAt: data.createdAt, // Keep as Timestamp
+        updatedAt: data.updatedAt, // Keep as Timestamp
       } as Story);
     });
     callback(stories);
@@ -114,8 +114,8 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
                     id: doc.id,
                     ...data,
                     language, 
-                    createdAt: data.createdAt?.toMillis() || Date.now(),
-                    updatedAt: data.updatedAt?.toMillis() || Date.now(),
+                    createdAt: data.createdAt, // Keep as Timestamp
+                    updatedAt: data.updatedAt, // Keep as Timestamp
                 } as Story);
             }
         });
@@ -154,8 +154,8 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
                 id: doc.id,
                 ...data,
                 language: data.language, // Ensure language is included from the document data
-                createdAt: data.createdAt?.toMillis() || Date.now(),
-                updatedAt: data.updatedAt?.toMillis() || Date.now(),
+                createdAt: data.createdAt, // Keep as Firestore Timestamp
+                updatedAt: data.updatedAt, // Keep as Firestore Timestamp
             } as Story);
         });
         callback(stories);
@@ -184,8 +184,8 @@ export async function getStoryById(language: string, storyId: string): Promise<S
             id: docSnap.id,
             ...data,
             language,
-            createdAt: data.createdAt?.toMillis() || Date.now(),
-            updatedAt: data.updatedAt?.toMillis() || Date.now()
+            createdAt: data.createdAt, // Keep as Timestamp
+            updatedAt: data.updatedAt, // Keep as Timestamp
         } as Story
     }
     return null;

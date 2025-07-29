@@ -120,7 +120,7 @@ export default function ProfileClient() {
                                         </TableCell>
                                         <TableCell><Badge variant="outline">{story.language}</Badge></TableCell>
                                         <TableCell><Badge variant="outline">{story.level}</Badge></TableCell>
-                                        <TableCell>{format(story.updatedAt, 'PPpp')}</TableCell>
+                                        <TableCell>{story.updatedAt ? format(story.updatedAt.toDate(), 'PPpp') : 'N/A'}</TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>
                                                 <Edit className="h-4 w-4" />
