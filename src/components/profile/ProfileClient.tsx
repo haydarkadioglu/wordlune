@@ -60,11 +60,11 @@ export default function ProfileClient() {
                 description: `"${story.title}" has been successfully deleted.`,
                 variant: 'destructive'
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error deleting story:", error);
             toast({
                 title: "Error",
-                description: "Could not delete the story. Please try again.",
+                description: error.message || "Could not delete the story. Please try again.",
                 variant: 'destructive'
             });
         }
@@ -111,7 +111,7 @@ export default function ProfileClient() {
                                 </TableRow>
                             ) : (
                                 stories.map(story => (
-                                    <TableRow key={story.id}>
+                                    <TableRow key={`${story.language}-${story.id}`}>
                                         <TableCell className="font-medium">{story.title}</TableCell>
                                         <TableCell>
                                             <Badge variant={story.isPublished ? 'default' : 'secondary'}>
