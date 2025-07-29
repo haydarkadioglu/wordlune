@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import type { ListWord, WordCategory } from '@/types';
+import type { ListWord, WordCategory, UserList } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import WordList from '@/components/words/WordList';
 import WordTable from '@/components/words/WordTable';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { getAllWordsFromAllLists, updateWordInList, deleteWordFromList } from '@/lib/list-service';
+import { getAllWordsFromAllLists, getLists, updateWordInList, deleteWordFromList } from '@/lib/list-service';
 import { useSettings } from '@/hooks/useSettings';
 import { useSearchParams } from 'next/navigation';
 import AddWordToListDialog from '../lists/AddWordToListDialog';
@@ -58,9 +58,10 @@ export default function AllWordsClient() {
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const [words, setWords] = useState<(ListWord & { listId: string; listName: string })[]>([]);
+  const [lists, setLists] = useState<UserList[]>([]);
   const [loadingWords, setLoadingWords] = useState(true);
   
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<(ListWord & { listId: string }) | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,6 +78,9 @@ export default function AllWordsClient() {
   useEffect(() => {
     if (user?.uid) {
       setLoadingWords(true);
+      
+      const unsubscribeLists = getLists(user.uid, setLists);
+
       getAllWordsFromAllLists(user.uid)
         .then(setWords)
         .catch(err => {
@@ -84,9 +88,14 @@ export default function AllWordsClient() {
           toast({ title: "Error", description: "Could not fetch your words.", variant: "destructive" });
         })
         .finally(() => setLoadingWords(false));
+
+      return () => {
+        unsubscribeLists();
+      };
     } else {
       setLoadingWords(false);
       setWords([]);
+      setLists([]);
     }
   }, [user, toast]);
 
@@ -119,14 +128,15 @@ export default function AllWordsClient() {
 
   const handleEditWord = (word: ListWord & { listId: string }) => {
     setEditingWord(word);
-    setIsDialogOpen(true);
   };
 
   const openAddDialog = () => {
-      // In a real app, you'd likely want a way to select which list to add to.
-      // For now, this is disabled as "Add" is ambiguous without a list target.
-      // A better UX would be to open a dialog that first asks to select a list.
+    if (lists.length === 0) {
       toast({ title: t.noLists, description: t.noListsDesc, variant: 'destructive' });
+    } else {
+      setEditingWord(null); // Ensure we are not in edit mode
+      setIsAddDialogOpen(true);
+    }
   };
 
   const filteredWords = useMemo(() => {
@@ -159,6 +169,8 @@ export default function AllWordsClient() {
     }
     return <WordTable words={filteredWords} />;
   }
+  
+  const listIdForDialog = lists.length > 0 ? lists[0].id : '';
 
   return (
     <div className="space-y-8">
@@ -228,10 +240,16 @@ export default function AllWordsClient() {
         </CardContent>
       </Card>
 
+      <AddWordToListDialog
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        listId={listIdForDialog}
+      />
+      
       {editingWord && (
         <EditListWordDialog
-          isOpen={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
+          isOpen={!!editingWord}
+          onOpenChange={(open) => !open && setEditingWord(null)}
           listId={editingWord.listId}
           wordToEdit={editingWord}
         />

@@ -108,6 +108,9 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
   useEffect(() => {
     if (isOpen) {
       setDialogTargetLanguage(targetLanguage);
+    } else {
+      // Reset form when dialog closes
+      form.reset();
     }
   }, [isOpen, targetLanguage]);
   
@@ -123,7 +126,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
 
   const onSubmit = async (values: FormData) => {
     if (!user || !listId) {
-      toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+      toast({ title: "Error", description: "You must be logged in and select a list.", variant: "destructive" });
       return;
     }
 
@@ -198,7 +201,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
         variant="outline" 
         size="sm" 
         onClick={() => handleAIGeneration(action, form.getValues("word"))}
-        disabled={disabled || isSubmitting}
+        disabled={disabled || isSubmitting || !form.getValues("word")}
         className={`text-xs px-2 py-1 h-auto border-accent text-accent hover:bg-accent/10 hover:text-accent ${className}`}
     >
         {disabled ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3" />}
