@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch, serverTimestamp, getDoc, runTransaction, increment, getDocs } from 'firebase/firestore';
-import type { UserList, ListWord } from '@/types';
+import type { UserList, ListWord, WordCategory } from '@/types';
 
 // --- List Management ---
 
@@ -90,28 +90,31 @@ export function getWordsForList(
   return unsubscribe;
 }
 
-export async function getAllWordsFromLists(userId: string): Promise<ListWord[]> {
+export async function getAllWordsFromAllLists(userId: string): Promise<ListWord[]> {
     if (!userId || !db) return [];
     
     const allListWords: ListWord[] = [];
     const listsCollectionRef = collection(db, 'data', userId, 'lists');
     const listsSnapshot = await getDocs(listsCollectionRef);
 
-    const wordFetchPromises = listsSnapshot.docs.map(listDoc => {
+    for (const listDoc of listsSnapshot.docs) {
         const wordsCollectionRef = collection(db, 'data', userId, 'lists', listDoc.id, 'words');
-        return getDocs(wordsCollectionRef);
-    });
-
-    const wordSnapshots = await Promise.all(wordFetchPromises);
-
-    wordSnapshots.forEach(wordQuerySnapshot => {
-        wordQuerySnapshot.forEach(wordDoc => {
-            allListWords.push({ id: wordDoc.id, ...wordDoc.data() } as ListWord);
+        const wordsSnapshot = await getDocs(wordsCollectionRef);
+        wordsSnapshot.forEach(wordDoc => {
+            allListWords.push({ 
+                listId: listDoc.id, // Add listId for context
+                listName: listDoc.data().name, // Add listName for context
+                ...wordDoc.data(),
+                id: wordDoc.id,
+            } as ListWord & { listId: string; listName: string });
         });
-    });
+    }
     
+    allListWords.sort((a, b) => b.createdAt - a.createdAt);
+
     return allListWords;
 }
+
 
 export async function addWordToList(
     userId: string, 
@@ -137,7 +140,7 @@ export async function updateWordInList(
     userId: string, 
     listId: string, 
     wordId: string, 
-    wordData: { word: string; meaning: string; example: string; }
+    wordData: Partial<Omit<ListWord, 'id' | 'createdAt'>>
 ): Promise<void> {
     if (!userId || !listId || !wordId || !db) throw new Error("Authentication or database error.");
 
@@ -184,6 +187,7 @@ export async function addMultipleWordsToList(
                 example: pWord.exampleSentence,
                 meaning: pWord.meaning,
                 language: targetLanguage,
+                category: 'Uncategorized', // Default category for bulk add
                 createdAt: Date.now(),
             };
             transaction.set(newWordRef, wordToAdd);
@@ -212,49 +216,5 @@ export async function deleteMultipleWordsFromList(
 
         // 2. Decrement the word count on the parent list
         transaction.update(listDocRef, { wordCount: increment(-wordIds.length) });
-    });
-}
-
-// --- Stories List Management ---
-
-export async function findOrCreateStoriesList(userId: string): Promise<string> {
-    if (!userId || !db) throw new Error("User not authenticated or database not available.");
-    
-    const listsCollectionRef = collection(db, 'data', userId, 'lists');
-    const q = query(listsCollectionRef, orderBy('createdAt', 'desc'));
-    const listsSnapshot = await getDocs(q);
-    
-    // Check if Stories list already exists
-    for (const listDoc of listsSnapshot.docs) {
-        const listData = listDoc.data() as UserList;
-        if (listData.name === "Stories") {
-            return listDoc.id;
-        }
-    }
-    
-    // If not found, create a new Stories list
-    const newList = {
-        name: "Stories",
-        createdAt: Date.now(),
-        wordCount: 0,
-    };
-    const docRef = await addDoc(listsCollectionRef, newList);
-    return docRef.id;
-}
-
-export async function addWordToStoriesList(
-    userId: string,
-    word: string,
-    meaning: string
-): Promise<void> {
-    if (!userId || !word || !meaning || !db) throw new Error("Missing required parameters.");
-    
-    const storiesListId = await findOrCreateStoriesList(userId);
-    
-    await addWordToList(userId, storiesListId, {
-        word,
-        meaning,
-        example: `Example with "${word}".`, // Default example
-        language: "English" // Default language
     });
 }

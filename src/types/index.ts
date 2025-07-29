@@ -5,8 +5,10 @@ export type AppUser = FirebaseUser & {
   username: string;
 };
 
-export type WordCategory = 'Bad' | 'Good' | 'Very Good';
+export type WordCategory = 'Very Good' | 'Good' | 'Bad' | 'Repeat' | 'Uncategorized';
 
+// This interface is now deprecated and will be removed in the future.
+// ListWord is the primary type for words.
 export interface Word {
   id: string;
   text: string;
@@ -34,11 +36,12 @@ export interface UserList {
 }
 
 export interface ListWord {
-  id: string;
+  id:string;
   word: string;
   meaning: string;
   example: string;
   language: string;
+  category: WordCategory;
   createdAt: number; // timestamp
 }
 

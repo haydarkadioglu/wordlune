@@ -91,7 +91,7 @@ const getWordSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
     text: z.string().min(1, t.wordRequired),
-    category: z.enum(['Bad', 'Good', 'Very Good'], { required_error: t.categoryRequired }),
+    category: z.enum(['Bad', 'Good', 'Very Good', 'Repeat', 'Uncategorized'], { required_error: t.categoryRequired }),
     pronunciationText: z.string().optional(),
     meaning: z.string().optional(),
     exampleSentence: z.string().min(1, t.exampleSentenceRequired),
@@ -108,7 +108,7 @@ interface AddWordDialogProps {
   preFilledWord?: Partial<Word> | null;
 }
 
-const categories: WordCategory[] = ['Bad', 'Good', 'Very Good'];
+const categories: WordCategory[] = ['Uncategorized', 'Bad', 'Good', 'Very Good', 'Repeat'];
 
 export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editingWord, preFilledWord }: AddWordDialogProps) {
   const { toast } = useToast();
@@ -119,7 +119,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
     resolver: zodResolver(getWordSchema(uiLanguage as 'en' | 'tr')),
     defaultValues: {
       text: '',
-      category: 'Good',
+      category: 'Uncategorized',
       pronunciationText: '',
       meaning: '',
       exampleSentence: '',
@@ -134,7 +134,7 @@ export default function AddWordDialog({ isOpen, onOpenChange, onSaveWord, editin
     if (isOpen) {
       const defaultValues = {
         text: '',
-        category: 'Good' as WordCategory,
+        category: 'Uncategorized' as WordCategory,
         pronunciationText: '',
         meaning: '',
         exampleSentence: '',

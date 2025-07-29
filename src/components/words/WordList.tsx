@@ -1,5 +1,5 @@
 
-import type { Word, WordCategory } from '@/types';
+import type { ListWord, WordCategory } from '@/types';
 import WordListItem from './WordListItem';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -13,11 +13,12 @@ const translations = {
     noResults: 'Mevcut filtrelere uyan kelime bulunamadı.',
   }
 }
+
 interface WordListProps {
-  words: Word[];
-  onDeleteWord: (id: string) => void;
-  onEditWord: (word: Word) => void;
-  onUpdateCategory: (id: string, category: WordCategory) => void;
+  words: (ListWord & { listId: string; listName: string })[];
+  onDeleteWord: (listId: string, wordId: string) => void;
+  onEditWord: (word: ListWord & { listId: string }) => void;
+  onUpdateCategory: (listId: string, wordId: string, category: WordCategory) => void;
 }
 
 export default function WordList({ words, onDeleteWord, onEditWord, onUpdateCategory }: WordListProps) {
@@ -30,7 +31,13 @@ export default function WordList({ words, onDeleteWord, onEditWord, onUpdateCate
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
       {words.map((word) => (
-        <WordListItem key={word.id} word={word} onDelete={onDeleteWord} onEdit={onEditWord} onUpdateCategory={onUpdateCategory} />
+        <WordListItem 
+            key={`${word.listId}-${word.id}`} 
+            word={word} 
+            onDelete={() => onDeleteWord(word.listId, word.id)} 
+            onEdit={() => onEditWord(word)} 
+            onUpdateCategory={(category) => onUpdateCategory(word.listId, word.id, category)} 
+        />
       ))}
     </div>
   );

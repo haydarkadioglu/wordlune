@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +18,7 @@ import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
 import { translateWord } from '@/ai/flows/translate-word-flow';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { WordCategory } from '@/types';
 
 const translations = {
   en: {
@@ -30,6 +31,7 @@ const translations = {
     meaningRequired: 'Meaning is required.',
     exampleLabel: 'Example Sentence',
     exampleRequired: 'Example sentence is required.',
+    categoryLabel: 'Category',
     targetLanguageLabel: 'Translate To',
     cancel: 'Cancel',
     addWord: 'Add Word',
@@ -54,6 +56,7 @@ const translations = {
     meaningRequired: 'Anlam alanı zorunludur.',
     exampleLabel: 'Örnek Cümle',
     exampleRequired: 'Örnek cümle zorunludur.',
+    categoryLabel: 'Kategori',
     targetLanguageLabel: 'Çeviri Dili',
     cancel: 'İptal',
     addWord: 'Kelime Ekle',
@@ -70,12 +73,15 @@ const translations = {
   }
 };
 
+const allCategories: WordCategory[] = ['Uncategorized', 'Bad', 'Good', 'Very Good', 'Repeat'];
+
 const getFormSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
     word: z.string().min(1, { message: t.wordRequired }),
     meaning: z.string().min(1, { message: t.meaningRequired }),
     example: z.string().min(3, { message: t.exampleRequired }),
+    category: z.enum(allCategories)
   });
 };
 
@@ -111,6 +117,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
       word: "",
       meaning: "",
       example: "",
+      category: 'Uncategorized'
     },
   });
 
@@ -241,7 +248,6 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
               </div>
           </div>
 
-
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-1">
               <Label htmlFor="example">{t.exampleLabel}</Label>
@@ -253,6 +259,26 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId }: Ad
             )}
           </div>
         
+          <div>
+            <Label htmlFor="category">{t.categoryLabel}</Label>
+            <Controller
+              name="category"
+              control={form.control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                  <SelectTrigger id="category" className="w-full mt-1">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">Cancel</Button>

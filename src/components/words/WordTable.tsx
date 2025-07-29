@@ -1,5 +1,5 @@
 
-import type { Word, WordCategory } from '@/types';
+import type { ListWord, WordCategory } from '@/types';
 import { useMemo } from 'react';
 import {
   Table,
@@ -24,6 +24,7 @@ const translations = {
     wordHeader: 'Word',
     exampleHeader: 'Example Sentence',
     meaningHeader: (lang: string) => `Meaning (${lang})`,
+    listHeader: 'List',
     noWords: 'No words to display in the table. Add some words first!',
   },
   tr: {
@@ -31,31 +32,33 @@ const translations = {
     wordHeader: 'Kelime',
     exampleHeader: 'Örnek Cümle',
     meaningHeader: (lang: string) => `Anlamı (${lang})`,
+    listHeader: 'Liste',
     noWords: 'Tabloda gösterilecek kelime yok. Önce birkaç kelime ekleyin!',
   }
 }
 
 interface WordTableProps {
-  words: Word[];
+  words: (ListWord & { listName: string })[];
 }
 
-const categoryOrder: WordCategory[] = ['Very Good', 'Good', 'Bad'];
+const categoryOrder: WordCategory[] = ['Very Good', 'Good', 'Bad', 'Repeat', 'Uncategorized'];
 
 export default function WordTable({ words }: WordTableProps) {
   const { targetLanguage, uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
   const groupedWords = useMemo(() => {
-    const groups: Partial<Record<WordCategory, Word[]>> = {};
+    const groups: Partial<Record<WordCategory, (ListWord & { listName: string })[]>> = {};
     for (const word of words) {
-      if (!groups[word.category]) {
-        groups[word.category] = [];
+      const category = word.category || 'Uncategorized';
+      if (!groups[category]) {
+        groups[category] = [];
       }
-      groups[word.category]!.push(word);
+      groups[category]!.push(word);
     }
     // Sort words within each group alphabetically
     for (const category in groups) {
-      groups[category as WordCategory]?.sort((a, b) => a.text.localeCompare(b.text));
+      groups[category as WordCategory]?.sort((a, b) => a.word.localeCompare(b.word));
     }
     return groups;
   }, [words]);
@@ -82,16 +85,20 @@ export default function WordTable({ words }: WordTableProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[15%]">{t.wordHeader}</TableHead>
-                    <TableHead className="w-[60%]">{t.exampleHeader}</TableHead>
-                    <TableHead className="w-[25%]">{t.meaningHeader(targetLanguage)}</TableHead>
+                    <TableHead className="w-[50%]">{t.exampleHeader}</TableHead>
+                    <TableHead className="w-[20%]">{t.meaningHeader(targetLanguage)}</TableHead>
+                    <TableHead className="w-[15%]">{t.listHeader}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupedWords[category]?.map(word => (
                     <TableRow key={word.id}>
-                      <TableCell className="font-medium">{word.text}</TableCell>
-                      <TableCell className="text-muted-foreground">{word.exampleSentence}</TableCell>
+                      <TableCell className="font-medium">{word.word}</TableCell>
+                      <TableCell className="text-muted-foreground">{word.example}</TableCell>
                       <TableCell>{word.meaning}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{word.listName}</Badge>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -74,6 +74,7 @@ const Word = ({ children, storyTitle }: { children: string, storyTitle: string }
                 meaning: translationResult.join(', '),
                 example: storyTitle, // Using story title as context
                 language: targetLanguage,
+                category: "Uncategorized",
             });
             toast({ title: "Word Added!", description: `"${children}" has been added to your list.` });
         } catch (error) {

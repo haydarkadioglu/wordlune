@@ -12,11 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { translateWord } from '@/ai/flows/translate-word-flow';
 import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { UserList } from '@/types';
 
 const translations = {
     en: {
         title: 'Quick Translator',
-        description: 'Translate a word and add it to your list.',
+        description: 'Select a list, translate a word, and add it.',
         from: 'From',
         to: 'To',
         swapLanguages: 'Swap languages',
@@ -28,10 +29,13 @@ const translations = {
         translationsFor: (word: string, lang: string) => `Translations for "${word}" in ${lang}`,
         addWordAria: (meaning: string) => `Add ${meaning} to words`,
         enterWord: 'Please enter a word to translate.',
+        selectList: 'Select a list',
+        noListSelected: 'No list selected. Please select a list from the dropdown.',
+        noListDesc: 'You must select a list to add words to.'
     },
     tr: {
         title: 'Hızlı Çevirmen',
-        description: 'Bir kelimeyi çevirin ve listenize ekleyin.',
+        description: 'Bir liste seçin, bir kelimeyi çevirin ve ekleyin.',
         from: 'Kaynak Dil',
         to: 'Hedef Dil',
         swapLanguages: 'Dilleri değiştir',
@@ -43,6 +47,9 @@ const translations = {
         translationsFor: (word: string, lang: string) => `"${word}" için ${lang} dilindeki çeviriler`,
         addWordAria: (meaning: string) => `${meaning} kelimesini listeye ekle`,
         enterWord: 'Lütfen çevirmek için bir kelime girin.',
+        selectList: 'Bir liste seçin',
+        noListSelected: 'Liste seçilmedi. Lütfen açılır menüden bir liste seçin.',
+        noListDesc: 'Kelime eklemek için bir liste seçmelisiniz.'
     }
 };
 
@@ -57,9 +64,12 @@ type TranslateFormData = z.infer<ReturnType<typeof getTranslateSchema>>;
 
 interface QuickTranslatorProps {
     onAddWord: (word: string, meaning: string) => void;
+    listId: string | null;
+    lists: UserList[];
+    setListId: (id: string) => void;
 }
 
-export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
+export default function QuickTranslator({ onAddWord, listId, lists, setListId }: QuickTranslatorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [translationsResult, setTranslationsResult] = useState<string[]>([]);
   const { toast } = useToast();
@@ -115,6 +125,14 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
     setLocalTargetLanguage(temp);
   };
 
+  const handleAddClick = (meaning: string) => {
+    if (!listId) {
+        toast({ title: t.noListSelected, description: t.noListDesc, variant: 'destructive' });
+        return;
+    }
+    onAddWord(getValues('word'), meaning);
+  };
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -126,8 +144,19 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+      <CardContent className="space-y-4">
+        <Select value={listId ?? ""} onValueChange={setListId}>
+            <SelectTrigger>
+                <SelectValue placeholder={t.selectList} />
+            </SelectTrigger>
+            <SelectContent>
+                {lists.map(list => (
+                    <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+
+        <div className="flex flex-col sm:flex-row items-center gap-2">
           <div className="w-full sm:flex-1">
              <Select value={localSourceLanguage} onValueChange={setLocalSourceLanguage}>
                 <SelectTrigger>
@@ -175,7 +204,7 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
         </form>
 
         {translationsResult.length > 0 && (
-          <div className="mt-6">
+          <div className="mt-2">
             <h4 className="font-semibold text-lg text-foreground mb-3">{t.translationsFor(getValues('word'), localTargetLanguage)}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {translationsResult.map((meaning, index) => (
@@ -185,7 +214,7 @@ export default function QuickTranslator({ onAddWord }: QuickTranslatorProps) {
                     size="icon" 
                     variant="ghost" 
                     className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => onAddWord(getValues('word'), meaning)}
+                    onClick={() => handleAddClick(meaning)}
                     aria-label={t.addWordAria(meaning)}
                     >
                     <PlusCircle className="h-5 w-5" />

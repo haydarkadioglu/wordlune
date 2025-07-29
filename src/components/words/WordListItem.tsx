@@ -1,10 +1,9 @@
 
-import type { Word, WordCategory } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { ListWord, WordCategory } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import CategoryLabel from './CategoryLabel';
 import { Button } from '@/components/ui/button';
-import { SpeakerIcon, Trash2, Edit3, Type } from 'lucide-react';
+import { Trash2, Edit3, Type } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import {
   DropdownMenu,
@@ -21,28 +20,34 @@ const translations = {
     editWord: 'Edit word',
     deleteWord: 'Delete word',
     usageExample: 'Usage Example',
-    changeCategory: 'Change Category'
+    changeCategory: 'Change Category',
+    list: 'List'
   },
   tr: {
     editWord: 'Kelimeyi düzenle',
     deleteWord: 'Kelimeyi sil',
     usageExample: 'Kullanım Örneği',
-    changeCategory: 'Kategoriyi Değiştir'
+    changeCategory: 'Kategoriyi Değiştir',
+    list: 'Liste'
   }
 }
 
 interface WordListItemProps {
-  word: Word;
-  onDelete: (id: string) => void;
-  onEdit: (word: Word) => void;
-  onUpdateCategory: (id: string, category: WordCategory) => void;
+  word: ListWord & { listName: string };
+  onDelete: () => void;
+  onEdit: () => void;
+  onUpdateCategory: (category: WordCategory) => void;
 }
 
 const categoryStyles: Record<WordCategory, string> = {
   'Very Good': 'bg-green-500 hover:bg-green-600 text-white border-green-600',
   'Good': 'bg-sky-500 hover:bg-sky-600 text-white border-sky-600',
   'Bad': 'bg-red-500 hover:bg-red-600 text-white border-red-600',
+  'Repeat': 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600',
+  'Uncategorized': 'bg-gray-400 hover:bg-gray-500 text-white border-gray-600',
 };
+
+const allCategories: WordCategory[] = ['Uncategorized', 'Bad', 'Good', 'Very Good', 'Repeat'];
 
 
 export default function WordListItem({ word, onDelete, onEdit, onUpdateCategory }: WordListItemProps) {
@@ -53,7 +58,8 @@ export default function WordListItem({ word, onDelete, onEdit, onUpdateCategory 
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="font-headline text-2xl text-primary">{word.text}</CardTitle>
+            <CardTitle className="font-headline text-2xl text-primary">{word.word}</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-1">{t.list}: {word.listName}</CardDescription>
             <div className="mt-2">
                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -69,21 +75,21 @@ export default function WordListItem({ word, onDelete, onEdit, onUpdateCategory 
                 <DropdownMenuContent>
                   <DropdownMenuRadioGroup
                     value={word.category}
-                    onValueChange={(value) => onUpdateCategory(word.id, value as WordCategory)}
+                    onValueChange={(value) => onUpdateCategory(value as WordCategory)}
                   >
-                    <DropdownMenuRadioItem value="Very Good">Very Good</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="Good">Good</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="Bad">Bad</DropdownMenuRadioItem>
+                    {allCategories.map(cat => (
+                        <DropdownMenuRadioItem key={cat} value={cat}>{cat}</DropdownMenuRadioItem>
+                    ))}
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => onEdit(word)} aria-label={t.editWord} className="text-muted-foreground hover:text-accent">
+            <Button variant="ghost" size="icon" onClick={onEdit} aria-label={t.editWord} className="text-muted-foreground hover:text-accent">
               <Edit3 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(word.id)} aria-label={t.deleteWord} className="text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="icon" onClick={onDelete} aria-label={t.deleteWord} className="text-muted-foreground hover:text-destructive">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -91,12 +97,6 @@ export default function WordListItem({ word, onDelete, onEdit, onUpdateCategory 
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-between">
         <div>
-          {word.pronunciationText && (
-            <div className="flex items-center space-x-2 mb-2 text-sm text-muted-foreground">
-              <SpeakerIcon className="h-5 w-5 text-accent" />
-              <span>{word.pronunciationText}</span>
-            </div>
-          )}
           {word.meaning && (
             <div className="flex items-center space-x-2 mb-3 text-sm text-muted-foreground">
               <Type className="h-5 w-5 text-accent" />
@@ -110,7 +110,7 @@ export default function WordListItem({ word, onDelete, onEdit, onUpdateCategory 
               {t.usageExample}
             </AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground pt-1 pb-2">
-              {word.exampleSentence}
+              {word.example}
             </AccordionContent>
           </AccordionItem>
         </Accordion>

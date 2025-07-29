@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import type { Word, WordCategory } from '@/types';
+import { useState, useMemo, useEffect } from 'react';
+import type { ListWord, WordCategory } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,40 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Search, Filter, XCircle, Loader2, List, LayoutGrid } from 'lucide-react';
-import AddWordDialog from '@/components/words/AddWordDialog';
 import WordList from '@/components/words/WordList';
 import WordTable from '@/components/words/WordTable';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getAllWordsFromAllLists, updateWordInList, deleteWordFromList } from '@/lib/list-service';
 import { useSettings } from '@/hooks/useSettings';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import AddWordToListDialog from '../lists/AddWordToListDialog';
+import EditListWordDialog from '../lists/EditListWordDialog';
 
 const translations = {
   en: {
     loadingWords: 'Loading your words...',
     allYourWords: 'All Your Words',
-    allYourWordsDesc: 'View, search, and manage all of your saved words.',
+    allYourWordsDesc: 'View, search, and manage all of your saved words from all your lists.',
     addNewWord: 'Add New Word',
     searchPlaceholder: 'Search words, meanings, or examples...',
     filterByCategory: 'Filter by category',
     allCategories: 'All Categories',
     cardsView: 'Cards',
     tableView: 'Table',
+    noLists: "No lists found.",
+    noListsDesc: "You need to create a list before you can add a word.",
   },
   tr: {
     loadingWords: 'Kelimeleriniz yükleniyor...',
     allYourWords: 'Tüm Kelimeleriniz',
-    allYourWordsDesc: 'Kaydedilen tüm kelimelerinizi görüntüleyin, arayın ve yönetin.',
+    allYourWordsDesc: 'Tüm listelerinizdeki kayıtlı kelimelerinizi görüntüleyin, arayın ve yönetin.',
     addNewWord: 'Yeni Kelime Ekle',
     searchPlaceholder: 'Kelime, anlam veya örnek arayın...',
     filterByCategory: 'Kategoriye göre filtrele',
     allCategories: 'Tüm Kategoriler',
     cardsView: 'Kartlar',
     tableView: 'Tablo',
+    noLists: "Hiç liste bulunamadı.",
+    noListsDesc: "Kelime ekleyebilmek için önce bir liste oluşturmalısınız.",
   }
 };
+
+const allCategories: WordCategory[] = ['All', 'Very Good', 'Good', 'Bad', 'Repeat', 'Uncategorized'];
 
 export default function AllWordsClient() {
   const { user } = useAuth();
@@ -51,104 +57,59 @@ export default function AllWordsClient() {
   const { uiLanguage } = useSettings();
   const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
-  const [words, setWords] = useState<Word[]>([]);
+  const [words, setWords] = useState<(ListWord & { listId: string; listName: string })[]>([]);
   const [loadingWords, setLoadingWords] = useState(true);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingWord, setEditingWord] = useState<Word | null>(null);
-  const [preFilledWord, setPreFilledWord] = useState<Partial<Word> | null>(null);
+  const [editingWord, setEditingWord] = useState<(ListWord & { listId: string }) | null>(null);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WordCategory | 'All'>('All');
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const categoryParam = searchParams.get('category');
-    if (categoryParam === 'Very Good' || categoryParam === 'Good' || categoryParam === 'Bad') {
+    const categoryParam = searchParams.get('category') as WordCategory | 'All';
+    if (categoryParam && allCategories.includes(categoryParam)) {
       setCategoryFilter(categoryParam);
-    } else if (categoryParam === 'All') {
-      setCategoryFilter('All');
     }
   }, [searchParams]);
 
   useEffect(() => {
-    if (!db) {
-      setLoadingWords(false);
-      return;
-    }
-    if (user && user.uid) {
+    if (user?.uid) {
       setLoadingWords(true);
-      const wordsCollectionRef = collection(db, 'data', user.uid, 'words');
-      const qWords = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
-      const unsubscribeWords = onSnapshot(qWords, (querySnapshot) => {
-        const fetchedWords: Word[] = [];
-        querySnapshot.forEach((doc) => {
-          fetchedWords.push({ id: doc.id, ...doc.data() } as Word);
-        });
-        setWords(fetchedWords);
-        setLoadingWords(false);
-      }, (error) => {
-        console.error("Error fetching words: ", error);
-        toast({ title: "Error fetching words", description: error.message, variant: "destructive" });
-        setLoadingWords(false);
-      });
-
-      return () => unsubscribeWords();
+      getAllWordsFromAllLists(user.uid)
+        .then(setWords)
+        .catch(err => {
+          console.error("Error fetching all words:", err);
+          toast({ title: "Error", description: "Could not fetch your words.", variant: "destructive" });
+        })
+        .finally(() => setLoadingWords(false));
     } else {
-      setWords([]);
       setLoadingWords(false);
+      setWords([]);
     }
   }, [user, toast]);
 
-  const handleSaveWord = async (newWordData: Omit<Word, 'id' | 'createdAt'>, id?: string) => {
-    if (!user || !user.uid || !db) {
-      toast({ title: "Error", description: "You must be logged in to save words.", variant: "destructive" });
-      return;
-    }
-
+  const handleUpdateWordCategory = async (listId: string, wordId: string, category: WordCategory) => {
+    if (!user?.uid) return;
     try {
-      if (id) {
-        const wordDocRef = doc(db, 'data', user.uid, 'words', id);
-        await updateDoc(wordDocRef, { ...newWordData });
-        toast({ title: "Word Updated", description: `"${newWordData.text}" has been updated.` });
-      } else {
-        const wordsCollectionRef = collection(db, 'data', user.uid, 'words');
-        const wordWithMeta = { ...newWordData, createdAt: Date.now() };
-        await addDoc(wordsCollectionRef, wordWithMeta);
-        toast({ title: "Word Added", description: `"${newWordData.text}" has been added to your list.` });
-      }
-      setEditingWord(null);
-      setPreFilledWord(null);
+      await updateWordInList(user.uid, listId, wordId, { category });
+      setWords(prev => prev.map(w => w.id === wordId && w.listId === listId ? { ...w, category } : w));
+      toast({ title: "Category Updated", description: "The word's category has been changed." });
     } catch (error: any) {
-      console.error("Error saving word: ", error);
-      toast({ title: "Error saving word", description: error.message, variant: "destructive" });
-    }
-  };
-  
-   const handleUpdateWordCategory = async (id: string, category: WordCategory) => {
-    if (!user || !user.uid || !db) {
-      toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
-      return;
-    }
-    try {
-        const wordDocRef = doc(db, 'data', user.uid, 'words', id);
-        await updateDoc(wordDocRef, { category });
-        toast({ title: "Category Updated", description: "The word's category has been changed." });
-    } catch (error: any) {
-        console.error("Error updating category: ", error);
-        toast({ title: "Error", description: "Could not update the category.", variant: "destructive" });
+      console.error("Error updating category: ", error);
+      toast({ title: "Error", description: "Could not update the category.", variant: "destructive" });
     }
   };
 
-  const handleDeleteWord = async (id: string) => {
-    if (!user || !user.uid || !db) {
-      toast({ title: "Error", description: "You must be logged in to delete words.", variant: "destructive" });
-      return;
-    }
-    const wordToDelete = words.find(w => w.id === id);
+  const handleDeleteWord = async (listId: string, wordId: string) => {
+    if (!user?.uid) return;
+    const wordToDelete = words.find(w => w.id === wordId && w.listId === listId);
     try {
-      const wordDocRef = doc(db, 'data', user.uid, 'words', id);
-      await deleteDoc(wordDocRef);
+      await deleteWordFromList(user.uid, listId, wordId);
+      setWords(prev => prev.filter(w => !(w.id === wordId && w.listId === listId)));
       if (wordToDelete) {
-        toast({ title: "Word Deleted", description: `"${wordToDelete.text}" has been removed.`, variant: "destructive" });
+        toast({ title: "Word Deleted", description: `"${wordToDelete.word}" has been removed.`, variant: "destructive" });
       }
     } catch (error: any) {
       console.error("Error deleting word: ", error);
@@ -156,23 +117,24 @@ export default function AllWordsClient() {
     }
   };
 
-  const handleEditWord = (word: Word) => {
+  const handleEditWord = (word: ListWord & { listId: string }) => {
     setEditingWord(word);
-    setPreFilledWord(null);
     setIsDialogOpen(true);
   };
 
   const openAddDialog = () => {
-    setEditingWord(null);
-    setPreFilledWord(null);
-    setIsDialogOpen(true);
+      // In a real app, you'd likely want a way to select which list to add to.
+      // For now, this is disabled as "Add" is ambiguous without a list target.
+      // A better UX would be to open a dialog that first asks to select a list.
+      toast({ title: t.noLists, description: t.noListsDesc, variant: 'destructive' });
   };
 
   const filteredWords = useMemo(() => {
     return words.filter(word => {
-      const matchesSearchTerm = word.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (word.meaning && word.meaning.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (word.exampleSentence && word.exampleSentence.toLowerCase().includes(searchTerm.toLowerCase()));
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearchTerm = word.word.toLowerCase().includes(searchTermLower) ||
+        word.meaning.toLowerCase().includes(searchTermLower) ||
+        word.example.toLowerCase().includes(searchTermLower);
       const matchesCategory = categoryFilter === 'All' || word.category === categoryFilter;
       return matchesSearchTerm && matchesCategory;
     });
@@ -238,10 +200,9 @@ export default function AllWordsClient() {
                       <SelectValue placeholder={t.filterByCategory} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="All">{t.allCategories}</SelectItem>
-                      <SelectItem value="Very Good">Very Good</SelectItem>
-                      <SelectItem value="Good">Good</SelectItem>
-                      <SelectItem value="Bad">Bad</SelectItem>
+                      {allCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat === 'All' ? t.allCategories : cat}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -267,13 +228,14 @@ export default function AllWordsClient() {
         </CardContent>
       </Card>
 
-      <AddWordDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSaveWord={handleSaveWord}
-        editingWord={editingWord}
-        preFilledWord={preFilledWord}
-      />
+      {editingWord && (
+        <EditListWordDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          listId={editingWord.listId}
+          wordToEdit={editingWord}
+        />
+      )}
     </div>
   );
 }

@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { updateWordInList } from '@/lib/list-service';
-import type { ListWord } from '@/types';
+import type { ListWord, WordCategory } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const translations = {
   en: {
@@ -24,6 +25,7 @@ const translations = {
     wordLabel: 'Word',
     meaningLabel: 'Meaning',
     exampleLabel: 'Example Sentence',
+    categoryLabel: 'Category',
     wordRequired: 'Word is required.',
     meaningRequired: 'Meaning is required.',
     exampleRequired: 'Example sentence is required.',
@@ -40,6 +42,7 @@ const translations = {
     wordLabel: 'Kelime',
     meaningLabel: 'Anlamı',
     exampleLabel: 'Örnek Cümle',
+    categoryLabel: 'Kategori',
     wordRequired: 'Kelime alanı zorunludur.',
     meaningRequired: 'Anlam alanı zorunludur.',
     exampleRequired: 'Örnek cümle alanı zorunludur.',
@@ -52,12 +55,15 @@ const translations = {
   }
 };
 
+const allCategories: WordCategory[] = ['Uncategorized', 'Bad', 'Good', 'Very Good', 'Repeat'];
+
 const getFormSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
     word: z.string().min(1, { message: t.wordRequired }),
     meaning: z.string().min(1, { message: t.meaningRequired }),
     example: z.string().min(3, { message: t.exampleRequired }),
+    category: z.enum(allCategories)
   });
 };
 
@@ -84,6 +90,7 @@ export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordT
       word: "",
       meaning: "",
       example: "",
+      category: "Uncategorized",
     },
   });
 
@@ -93,6 +100,7 @@ export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordT
         word: wordToEdit.word,
         meaning: wordToEdit.meaning,
         example: wordToEdit.example,
+        category: wordToEdit.category || 'Uncategorized',
       });
     }
   }, [wordToEdit, form, isOpen]);
@@ -151,6 +159,26 @@ export default function EditListWordDialog({ isOpen, onOpenChange, listId, wordT
             {form.formState.errors.example && (
               <p className="text-sm text-destructive mt-1">{form.formState.errors.example.message}</p>
             )}
+          </div>
+
+          <div>
+            <Label htmlFor="category">{t.categoryLabel}</Label>
+            <Controller
+              name="category"
+              control={form.control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                  <SelectTrigger id="category" className="w-full mt-1">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         
           <DialogFooter>
