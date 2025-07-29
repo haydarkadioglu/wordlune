@@ -13,8 +13,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
-import UpsertStoryDialog from './UpsertStoryDialog';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function ProfileClient() {
     const { user, loading: authLoading } = useAuth();
@@ -22,8 +22,6 @@ export default function ProfileClient() {
     const { toast } = useToast();
     const [stories, setStories] = useState<Story[]>([]);
     const [loadingStories, setLoadingStories] = useState(true);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingStory, setEditingStory] = useState<Story | null>(null);
 
     useEffect(() => {
         if (authLoading) return;
@@ -41,16 +39,6 @@ export default function ProfileClient() {
         return () => unsubscribe();
     }, [user, authLoading, router]);
 
-    const handleNewStory = () => {
-        setEditingStory(null);
-        setIsDialogOpen(true);
-    };
-
-    const handleEditStory = (story: Story) => {
-        setEditingStory(story);
-        setIsDialogOpen(true);
-    };
-
     const handleDeleteStory = async (story: Story) => {
         if (!user) return;
         try {
@@ -63,7 +51,7 @@ export default function ProfileClient() {
         } catch (error: any) {
             console.error("Error deleting story:", error);
             toast({
-                title: "Error",
+                title: "Error Deleting Story",
                 description: error.message || "Could not delete the story. Please try again.",
                 variant: 'destructive'
             });
@@ -87,8 +75,10 @@ export default function ProfileClient() {
                             <CardTitle className="font-headline text-2xl text-primary flex items-center gap-2"><BookUser /> My Stories</CardTitle>
                             <CardDescription>Create, manage, and share your own stories with the community.</CardDescription>
                         </div>
-                        <Button onClick={handleNewStory}>
-                            <PlusCircle className="mr-2" /> Create New Story
+                        <Button asChild>
+                           <Link href="/dashboard/stories/editor/new">
+                             <PlusCircle className="mr-2" /> Create New Story
+                           </Link>
                         </Button>
                     </div>
                 </CardHeader>
@@ -122,8 +112,10 @@ export default function ProfileClient() {
                                         <TableCell><Badge variant="outline">{story.level}</Badge></TableCell>
                                         <TableCell>{story.updatedAt ? format(story.updatedAt.toDate(), 'PPpp') : 'N/A'}</TableCell>
                                         <TableCell className="text-right space-x-2">
-                                            <Button variant="outline" size="icon" onClick={() => handleEditStory(story)}>
-                                                <Edit className="h-4 w-4" />
+                                            <Button variant="outline" size="icon" asChild>
+                                               <Link href={`/dashboard/stories/editor/${story.id}?lang=${story.language}`}>
+                                                 <Edit className="h-4 w-4" />
+                                               </Link>
                                             </Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -152,11 +144,6 @@ export default function ProfileClient() {
                     </Table>
                 </CardContent>
              </Card>
-             <UpsertStoryDialog 
-                isOpen={isDialogOpen} 
-                onOpenChange={setIsDialogOpen} 
-                story={editingStory} 
-             />
         </div>
     );
 }
