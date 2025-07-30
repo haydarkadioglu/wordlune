@@ -2,60 +2,57 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // --- User Data: Profiles & Usernames ---
+
+    // --- User Data ---
     // Usernames must be unique. Publicly readable to check for existence.
+    // Only the user can create their own username mapping, not update or delete.
     match /usernames/{username} {
       allow read;
       allow create: if request.auth != null;
-      allow update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
-    }
-    
-    // User profile data. Users can only read/write their own profile.
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow update, delete: if false; // Prevent modification
     }
 
-    // --- Word & List Data ---
-    // Users can only read and write data under their own user ID.
+    // User profile data.
+    // Users can create their own profile.
+    // Users can only read/update their own profile.
+    match /users/{userId} {
+      allow create: if request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
+      // Allow reading/writing to subcollections like loginHistory
+      match /{allPaths=**} {
+         allow read, write: if request.auth.uid == userId;
+      }
+    }
+    
+    // --- Application Data (Words, Lists) ---
+    // Users can read and write to their own data segment.
     match /data/{userId}/{language}/{document=**} {
       allow read, write: if request.auth.uid == userId;
     }
 
-    // --- Stories Data ---
-    // Anyone can read published stories.
+    // --- Stories ---
+    // Public stories can be read by anyone if they are published.
+    // Admins can do anything.
     match /stories/{language}/stories/{storyId} {
-      allow read: if resource.data.isPublished == true;
+      allow read: if resource.data.isPublished == true || get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists();
       allow create: if request.auth != null;
-      allow update: if request.auth.uid == resource.data.authorId;
-      // Deletion is handled by the more specific rule below for security.
-      allow delete: if get(/databases/$(database)/documents/stories_by_author/$(request.auth.uid)/stories/$(storyId)).data.authorId == request.auth.uid;
+      allow update: if request.auth.uid == resource.data.authorId || get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists();
+      allow delete: if get(/databases/$(database)/documents/stories/$(language)/stories/$(storyId)).data.authorId == request.auth.uid || get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists();
     }
-
-    // --- Stories by Author ---
-    // This collection is no longer primarily used for reads but is kept for potential future use 
-    // and to ensure delete operations are secure and efficient.
-    match /stories_by_author/{authorId}/stories/{storyId} {
-        allow read, write: if request.auth.uid == authorId;
-        // This rule is crucial. It allows a user to delete from their own subcollection without needing to read the document first,
-        // which is safer and works with batch deletes.
-        allow delete: if request.auth.uid == authorId;
-    }
-
-    // Collection group query for stories - allows a user to fetch all their stories across languages.
+    
+    // Users can query stories they authored across all languages.
     match /{path=**}/stories/{storyId} {
-      allow list: if request.query.get("authorId") == request.auth.uid;
+        allow read: if resource.data.authorId == request.auth.uid;
     }
-
-    // --- Admin & Moderation Data ---
-    // Admins collection is readable only by admins (validation via backend).
+    
+    // --- Admin and Ban Lists ---
+    // Only admins can read the full list of admins or bans.
     match /admins/{adminId} {
-      allow read: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists == true;
+        allow read, write: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists();
     }
-
-    // Bans are not readable by clients.
+    
     match /user_bans/{userId} {
-      allow read, write: if false; 
+        allow read, write: if get(/databases/$(database)/documents/admins/$(request.auth.uid)).exists();
     }
   }
 }
