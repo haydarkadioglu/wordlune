@@ -153,11 +153,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            setUser({ ...firebaseUser, username: userData.username });
+            setUser(firebaseUser);
         } else {
             console.warn("User profile document not found for user:", firebaseUser.uid);
-            setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+            setUser(firebaseUser);
         }
     } catch (error) {
         console.error("Error fetching user profile:", error);

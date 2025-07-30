@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
-import { logLoginHistory, checkUsernameExists, createInitialUserDocuments } from '@/lib/user-service';
+import { logLoginHistory, createInitialUserDocuments } from '@/lib/user-service';
 
 
 const translations = {
@@ -101,11 +101,6 @@ const getRegisterSchema = (lang: 'en' | 'tr') => {
   const t = translations[lang];
   return z.object({
     displayName: z.string().min(2, t.nameMinLengthZod),
-    username: z.string()
-      .min(3, t.usernameMinLengthZod)
-      .max(20, t.usernameMaxLengthZod)
-      .regex(/^[a-z0-9_]+$/, t.usernameRegexZod)
-      .transform(val => val.trim().toLowerCase()),
     email: z.string().email(t.invalidEmailZod),
     password: z.string().min(6, t.passwordMinLengthZod),
     confirmPassword: z.string().min(6, t.passwordMinLengthZod),
@@ -139,17 +134,10 @@ export default function RegisterForm() {
     }
 
     try {
-      const usernameExists = await checkUsernameExists(data.username);
-      if (usernameExists) {
-        toast({ title: t.errorTitle, description: t.usernameTaken, variant: 'destructive' });
-        setIsLoading(false);
-        return;
-      }
-
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
       await updateProfile(userCredential.user, { displayName: data.displayName });
-      await createInitialUserDocuments(userCredential.user.uid, data.username, data.displayName, data.email);
+      await createInitialUserDocuments(userCredential.user.uid, data.displayName, data.email);
       await logLoginHistory(userCredential.user.uid);
       
       toast({ title: t.successTitle, description: t.accountCreated });
@@ -157,6 +145,11 @@ export default function RegisterForm() {
 
     } catch (error: any) {
       console.error("Registration error:", error);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       const errorCode = error.code;
       let errorMessage = t.registrationFailed;
        if (errorCode === 'auth/email-already-in-use') {
@@ -167,6 +160,10 @@ export default function RegisterForm() {
         errorMessage = t.weakPassword;
       } else if (errorCode === 'auth/configuration-not-found') {
         errorMessage = t.configNotFound;
+      } else if (error.message && error.message.includes('permissions')) {
+        errorMessage = `Firestore Permission Error: ${error.message}`;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       toast({ title: t.errorTitle, description: errorMessage, variant: 'destructive' });
     } finally {
@@ -199,11 +196,6 @@ export default function RegisterForm() {
           <Label htmlFor="displayName">{t.nameLabel}</Label>
           <Input id="displayName" type="text" {...register('displayName')} placeholder={t.namePlaceholder} className="mt-1" />
           {errors.displayName && <p className="mt-1 text-sm text-destructive">{errors.displayName.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="username">{t.usernameLabel}</Label>
-          <Input id="username" type="text" {...register('username')} placeholder={t.usernamePlaceholder} className="mt-1" />
-          {errors.username && <p className="mt-1 text-sm text-destructive">{errors.username.message}</p>}
         </div>
         <div>
           <Label htmlFor="email">{t.emailLabel}</Label>

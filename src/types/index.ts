@@ -1,9 +1,7 @@
 
 import type { User as FirebaseUser } from "firebase/auth";
 
-export type AppUser = FirebaseUser & {
-  username: string;
-};
+export type AppUser = FirebaseUser;
 
 export type WordCategory = 'Very Good' | 'Good' | 'Bad' | 'Repeat' | 'Uncategorized';
 
