@@ -146,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
     if (!db) {
-        setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+        setUser(firebaseUser);
         return;
     }
     try {
@@ -160,12 +160,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     } catch (error) {
         console.error("Error fetching user profile:", error);
-        setUser({ ...firebaseUser, username: firebaseUser.displayName || 'user' });
+        setUser(firebaseUser);
     }
   }, []);
 
   useEffect(() => {
     setLoading(true);
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         await fetchUserProfile(firebaseUser);
