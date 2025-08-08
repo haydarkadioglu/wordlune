@@ -46,27 +46,52 @@ const translations = {
 export default function StoriesClient() {
     const [allStories, setAllStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const { uiLanguage, sourceLanguage } = useSettings();
-    const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+    const settings = useSettings();
     
     const [levelFilter, setLevelFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
+    // Wait for settings to be loaded
+    if (!settings) {
+        return (
+             <div className="space-y-6">
+                <Skeleton className="h-12 w-1/3" />
+                <Skeleton className="h-16 w-full" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                    {[...Array(3)].map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-10 w-full" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+    
+    const { uiLanguage, sourceLanguage } = settings;
+    const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+
     useEffect(() => {
-        setIsLoading(true);
-        // Use the dedicated function for fetching only published stories
-        const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
-            setAllStories(fetchedStories);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
+        if (sourceLanguage) {
+            setIsLoading(true);
+            const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
+                setAllStories(fetchedStories);
+                setIsLoading(false);
+            });
+            return () => unsubscribe();
+        }
     }, [sourceLanguage]);
     
     const uniqueLevels = useMemo(() => [...new Set(allStories.map(s => s.level).filter(Boolean))], [allStories]);
     const uniqueCategories = useMemo(() => [...new Set(allStories.map(s => s.category).filter(Boolean))], [allStories]);
 
     const filteredStories = useMemo(() => {
-        // No need to filter by isPublished here anymore, as the service function already does it.
         return allStories.filter(story => {
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
             const categoryMatch = categoryFilter === 'all' || story.category === categoryFilter;
