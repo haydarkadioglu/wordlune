@@ -137,8 +137,9 @@ export default function LandingPage() {
 
   useEffect(() => {
     const fetchAndroidLink = async () => {
-      if (!isFirebaseReady()) {
-        console.warn("Firebase not ready, skipping Android app link fetch");
+      // Only fetch if user is authenticated to avoid permission errors
+      if (!isFirebaseReady() || !user) {
+        console.warn("Firebase not ready or user not authenticated, skipping Android app link fetch");
         return;
       }
       try {
@@ -155,11 +156,11 @@ export default function LandingPage() {
       }
     };
 
-    // Only attempt to fetch if we're not loading and Firebase is ready
-    if (!loading && isFirebaseReady()) {
+    // Only attempt to fetch if we're not loading, Firebase is ready, and user is authenticated
+    if (!loading && isFirebaseReady() && user) {
       fetchAndroidLink();
     }
-  }, [loading]);
+  }, [loading, user]);
 
   if (loading) {
     return (

@@ -15,15 +15,15 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import Logo from '@/components/common/Logo';
-import { logLoginHistory, getEmailForUsername } from '@/lib/user-service';
+import { logLoginHistory } from '@/lib/user-service';
 
 
 const translations = {
   en: {
     title: "Sign in to WordLune",
     description: "Continue to improve your vocabulary!",
-    emailOrUsernameLabel: "Email or Username",
-    emailOrUsernamePlaceholder: "example@email.com or username",
+    emailOrUsernameLabel: "Email",
+    emailOrUsernamePlaceholder: "example@email.com",
     passwordLabel: "Password",
     signInButton: "Sign In",
     or: "Or",
@@ -49,8 +49,8 @@ const translations = {
   tr: {
     title: "WordLune'a Giriş Yap",
     description: "Kelime hazinenizi geliştirmeye devam edin!",
-    emailOrUsernameLabel: "E-posta veya Kullanıcı Adı",
-    emailOrUsernamePlaceholder: "ornek@eposta.com veya kullanıcıadı",
+    emailOrUsernameLabel: "E-posta",
+    emailOrUsernamePlaceholder: "ornek@eposta.com",
     passwordLabel: "Şifre",
     signInButton: "Giriş Yap",
     or: "Veya",
@@ -107,17 +107,7 @@ export default function LoginForm() {
       return;
     }
     try {
-      let email = data.identifier;
-      // If identifier doesn't look like an email, assume it's a username and find the email.
-      if (!email.includes('@')) {
-        const foundEmail = await getEmailForUsername(email);
-        if (!foundEmail) {
-            toast({ title: t.errorTitle, description: t.userNotFound, variant: 'destructive' });
-            setIsLoading(false);
-            return;
-        }
-        email = foundEmail;
-      }
+      const email = data.identifier;
       
       const userCredential = await signInWithEmailAndPassword(auth, email, data.password);
       await logLoginHistory(userCredential.user.uid);

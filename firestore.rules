@@ -5,8 +5,14 @@ service cloud.firestore {
 
     // USER DATA: Lists and Words
     // Allows a user to read and write only their own data.
+    match /data/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /data/{userId}/{language} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
     match /data/{userId}/{language}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
     // PUBLIC STORIES
@@ -14,9 +20,14 @@ service cloud.firestore {
     // Create/Update: Allow authenticated users to create/update their own stories.
     // Delete: Allow a user to delete their own story by checking the document's authorId before the operation.
     match /stories/{language}/stories/{storyId} {
-      allow read: if resource.data.isPublished == true || request.auth.uid == resource.data.authorId;
+      allow read: if resource == null || resource.data.isPublished == true || request.auth.uid == resource.data.authorId;
       allow create, update: if request.auth.uid == request.resource.data.authorId;
       allow delete: if get(/databases/$(database)/documents/stories/$(language)/stories/$(storyId)).data.authorId == request.auth.uid;
+    }
+    
+    // STORIES COLLECTION ACCESS (for listing)
+    match /stories/{language}/stories {
+      allow read: if request.auth != null;
     }
     
     // STORIES BY AUTHOR (for user's own story management)
@@ -28,26 +39,23 @@ service cloud.firestore {
     // COLLECTION GROUP QUERIES
     // Allows a user to query the 'stories' collection group to find all stories they have authored across all languages.
     match /{path=**}/stories/{storyId} {
-      allow read: if resource.data.authorId == request.auth.uid;
-    }
-
-    // USERNAMES: Publicly readable to check for existence, but only the system (via backend/transactions) should write.
-    // To secure this, we check if the write operation is for a user creating their own username mapping.
-    match /usernames/{username} {
-      allow read;
-      allow create: if request.auth.uid == request.resource.data.userId;
-      allow update, delete: if get(/databases/$(database)/documents/usernames/$(username)).data.userId == request.auth.uid;
+      allow read: if request.auth != null && (resource == null || resource.data.authorId == request.auth.uid || resource.data.isPublished == true);
     }
 
     // USER PROFILES: Users can read public profiles and update their own.
     match /users/{userId} {
-      allow read;
-      allow update: if request.auth.uid == userId;
+      allow read: if true;
+      allow create, update: if request.auth.uid == userId;
     }
     
     // ADMINS: Only readable by admins themselves to check status.
     match /admins/{adminId} {
         allow read: if request.auth.uid == adminId;
+    }
+    
+    // VERSIONS: Only authenticated users can read app links and version info
+    match /versions/{document} {
+        allow read: if request.auth != null;
     }
     
      // USER BANS: Read-only for backend/rules, not client-readable directly except through secure logic.

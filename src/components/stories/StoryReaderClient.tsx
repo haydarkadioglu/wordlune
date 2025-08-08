@@ -34,7 +34,7 @@ const Word = ({ children, storyTitle, storyLanguage }: { children: string, story
     const [translationResult, setTranslationResult] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-    const { targetLanguage, storyListId, setStoryListId } from useSettings();
+    const { targetLanguage, storyListId, setStoryListId } = useSettings();
     const { user } = useAuth();
     const { toast } = useToast();
 
