@@ -13,8 +13,8 @@ export function getLists(
   callback: (lists: UserList[]) => void
 ) {
   if (!userId || !language || !db) return () => {};
-
-  const listsCollectionRef = collection(db, 'data', userId, language);
+  const lang = language.toLowerCase();
+  const listsCollectionRef = collection(db, 'data', userId, lang);
   const q = query(listsCollectionRef, orderBy('createdAt', 'desc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -32,8 +32,8 @@ export function getLists(
 
 export async function createList(userId: string, language: string, name: string): Promise<string> {
     if (!userId || !language || !db) throw new Error("User not authenticated, language not provided, or database not available.");
-    
-    const listsCollectionRef = collection(db, 'data', userId, language);
+    const lang = language.toLowerCase();
+    const listsCollectionRef = collection(db, 'data', userId, lang);
     const newList = {
         name,
         createdAt: Date.now(),
@@ -45,8 +45,8 @@ export async function createList(userId: string, language: string, name: string)
 
 export async function deleteList(userId: string, language: string, listId: string): Promise<void> {
     if (!userId || !language || !listId || !db) throw new Error("Missing user, language, or list ID, or database unavailable.");
-    
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
     await deleteDoc(listDocRef);
 }
 
@@ -55,7 +55,8 @@ export async function deleteList(userId: string, language: string, listId: strin
 
 export async function getListDetails(userId: string, language: string, listId: string): Promise<UserList | null> {
     if (!userId || !language || !listId || !db) return null;
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
     const docSnap = await getDoc(listDocRef);
     if(docSnap.exists()){
         return { id: docSnap.id, ...docSnap.data() } as UserList;
@@ -71,8 +72,8 @@ export function getWordsForList(
   callback: (words: ListWord[]) => void
 ) {
   if (!userId || !language || !listId || !db) return () => {};
-
-  const wordsCollectionRef = collection(db, 'data', userId, language, listId, 'words');
+  const lang = language.toLowerCase();
+  const wordsCollectionRef = collection(db, 'data', userId, lang, listId, 'words');
   const q = query(wordsCollectionRef, orderBy('createdAt', 'desc'));
 
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -90,13 +91,13 @@ export function getWordsForList(
 
 export async function getAllWordsFromAllLists(userId: string, language: string): Promise<(ListWord & { listId: string; listName: string; })[]> {
     if (!userId || !language || !db) return [];
-    
+    const lang = language.toLowerCase();
     const allListWords: (ListWord & { listId: string; listName: string; })[] = [];
-    const listsCollectionRef = collection(db, 'data', userId, language);
+    const listsCollectionRef = collection(db, 'data', userId, lang);
     const listsSnapshot = await getDocs(listsCollectionRef);
 
     for (const listDoc of listsSnapshot.docs) {
-        const wordsCollectionRef = collection(db, 'data', userId, language, listDoc.id, 'words');
+        const wordsCollectionRef = collection(db, 'data', userId, lang, listDoc.id, 'words');
         const wordsSnapshot = await getDocs(wordsCollectionRef);
         wordsSnapshot.forEach(wordDoc => {
             allListWords.push({ 
@@ -121,8 +122,8 @@ export async function addWordToList(
     wordData: Omit<ListWord, 'id' | 'createdAt'>
 ): Promise<void> {
     if (!userId || !language || !listId || !db) throw new Error("Authentication, language, or database error.");
-
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
     const wordsCollectionRef = collection(listDocRef, 'words');
 
     await runTransaction(db, async (transaction) => {
@@ -140,8 +141,8 @@ export async function updateWordInList(
     wordData: Partial<Omit<ListWord, 'id' | 'createdAt'>>
 ): Promise<void> {
     if (!userId || !language || !listId || !wordId || !db) throw new Error("Authentication, language or database error.");
-
-    const wordDocRef = doc(db, 'data', userId, language, listId, 'words', wordId);
+    const lang = language.toLowerCase();
+    const wordDocRef = doc(db, 'data', userId, lang, listId, 'words', wordId);
     await updateDoc(wordDocRef, wordData);
 }
 
@@ -152,8 +153,8 @@ export async function deleteWordFromList(
     wordId: string
 ): Promise<void> {
     if (!userId || !language || !listId || !wordId || !db) throw new Error("Missing required IDs or database unavailable.");
-
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
     const wordDocRef = doc(listDocRef, 'words', wordId);
     
     await runTransaction(db, async (transaction) => {
@@ -170,8 +171,8 @@ export async function addMultipleWordsToList(
     targetLanguage: string
 ): Promise<void> {
     if (!userId || !language || !listId || !processedWords.length || !db) throw new Error("Missing required data or db unavailable.");
-
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
 
     await runTransaction(db, async (transaction) => {
         const wordsCollectionRef = collection(listDocRef, 'words');
@@ -181,7 +182,7 @@ export async function addMultipleWordsToList(
                 word: pWord.text,
                 example: pWord.exampleSentence,
                 meaning: pWord.meaning,
-                language: targetLanguage,
+                language: targetLanguage.toLowerCase(),
                 category: 'Uncategorized',
                 createdAt: Date.now(),
             };
@@ -198,8 +199,8 @@ export async function deleteMultipleWordsFromList(
     wordIds: string[]
 ): Promise<void> {
     if (!userId || !language || !listId || !wordIds.length || !db) throw new Error("Missing required IDs or database unavailable.");
-
-    const listDocRef = doc(db, 'data', userId, language, listId);
+    const lang = language.toLowerCase();
+    const listDocRef = doc(db, 'data', userId, lang, listId);
     
     await runTransaction(db, async (transaction) => {
         wordIds.forEach(wordId => {

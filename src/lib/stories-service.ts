@@ -15,8 +15,8 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
       callback([]);
       return () => {};
   }
-
-  const storiesCollectionRef = collection(db, 'stories', language, 'stories');
+  const lang = language.toLowerCase();
+  const storiesCollectionRef = collection(db, 'stories', lang, 'stories');
   // Query for all stories, ordered by creation date. Admin needs to see everything.
   const q = query(storiesCollectionRef, orderBy('createdAt', 'desc'));
 
@@ -27,14 +27,14 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
       stories.push({ 
         id: doc.id,
         ...data,
-        language,
+        language: lang,
         createdAt: data.createdAt, // Keep as Timestamp
         updatedAt: data.updatedAt, // Keep as Timestamp
       } as Story);
     });
     callback(stories);
   }, (error) => {
-    console.error(`Error fetching all stories for admin in ${language}: `, error);
+    console.error(`Error fetching all stories for admin in ${lang}: `, error);
     callback([]);
   });
 
@@ -54,8 +54,8 @@ export function getPublishedStories(language: string, callback: (stories: Story[
       callback([]);
       return () => {};
   }
-
-  const storiesCollectionRef = collection(db, 'stories', language, 'stories');
+  const lang = language.toLowerCase();
+  const storiesCollectionRef = collection(db, 'stories', lang, 'stories');
   // Query ONLY for published stories, ordered by creation date.
   const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
@@ -66,14 +66,14 @@ export function getPublishedStories(language: string, callback: (stories: Story[
       stories.push({ 
         id: doc.id,
         ...data,
-        language,
+        language: lang,
         createdAt: data.createdAt, // Keep as Timestamp
         updatedAt: data.updatedAt, // Keep as Timestamp
       } as Story);
     });
     callback(stories);
   }, (error) => {
-    console.error(`Error fetching published stories for ${language}: `, error);
+    console.error(`Error fetching published stories for ${lang}: `, error);
     callback([]);
   });
 
@@ -105,9 +105,6 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
         const stories: Story[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // The parent of a subcollection doc is the document containing it.
-            // The parent of that document is the collection containing it.
-            // So doc.ref.parent.parent.id should be the language.
             const language = doc.ref.parent.parent?.id; 
             if (language) {
                 stories.push({
@@ -181,14 +178,15 @@ export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]
  */
 export async function getStoryById(language: string, storyId: string): Promise<Story | null> {
     if (!db || !language) return null;
-    const storyDocRef = doc(db, 'stories', language, 'stories', storyId);
+    const lang = language.toLowerCase();
+    const storyDocRef = doc(db, 'stories', lang, 'stories', storyId);
     const docSnap = await getDoc(storyDocRef);
     if(docSnap.exists()){
         const data = docSnap.data();
         return {
             id: docSnap.id,
             ...data,
-            language,
+            language: lang,
             createdAt: data.createdAt, // Keep as Timestamp
             updatedAt: data.updatedAt, // Keep as Timestamp
         } as Story
@@ -210,7 +208,8 @@ export async function upsertStory(
     const { language, ...dataToSave } = storyData;
     if (!language) throw new Error("Story language must be provided.");
 
-    const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
+    const lang = language.toLowerCase();
+    const publicStoryCollectionRef = collection(db, 'stories', lang, 'stories');
     
     if (storyId) {
         const storyDocRef = doc(publicStoryCollectionRef, storyId);
@@ -249,8 +248,8 @@ export async function upsertUserStory(
     
     const { language, ...dataToSave } = storyData;
     if (!language) throw new Error("Story language must be provided.");
-
-    const publicStoryCollectionRef = collection(db, 'stories', language, 'stories');
+    const lang = language.toLowerCase();
+    const publicStoryCollectionRef = collection(db, 'stories', lang, 'stories');
     
     const batch = writeBatch(db);
 
@@ -288,8 +287,8 @@ export async function deleteStory(story: Story): Promise<void> {
     }
 
     const batch = writeBatch(db);
-    
-    const publicStoryDocRef = doc(db, 'stories', story.language, 'stories', story.id);
+    const lang = story.language.toLowerCase();
+    const publicStoryDocRef = doc(db, 'stories', lang, 'stories', story.id);
     batch.delete(publicStoryDocRef);
     
     await batch.commit();
@@ -308,5 +307,11 @@ export async function deleteUserStory(userId: string, story: Story): Promise<voi
         throw new Error("You can only delete your own stories.");
     }
     
-    await deleteStory(story);
+    try {
+        await deleteStory(story);
+    } catch (error) {
+        console.error("Error deleting user story:", error);
+        // Re-throw the error to be caught by the calling component
+        throw error;
+    }
 }
