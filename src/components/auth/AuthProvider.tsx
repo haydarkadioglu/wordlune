@@ -146,21 +146,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
     if (!db) {
-        setUser(firebaseUser);
+        setUser({ ...firebaseUser, username: firebaseUser.displayName } as AppUser);
         return;
     }
     try {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-            setUser(firebaseUser);
+            setUser({ ...firebaseUser, ...userDocSnap.data() } as AppUser);
         } else {
             console.warn("User profile document not found for user:", firebaseUser.uid);
-            setUser(firebaseUser);
+            setUser({ ...firebaseUser, username: firebaseUser.displayName } as AppUser);
         }
     } catch (error) {
         console.error("Error fetching user profile:", error);
-        setUser(firebaseUser);
+        setUser({ ...firebaseUser, username: firebaseUser.displayName } as AppUser);
     }
   }, []);
 
