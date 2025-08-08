@@ -94,7 +94,7 @@ interface AddWordToListDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   listId: string;
-  lists: UserList[];
+  lists?: UserList[];
   onListChange: (listId: string) => void;
   preFilledData?: Partial<Pick<FormData, 'word' | 'meaning'>>;
 }
@@ -238,7 +238,7 @@ export default function AddWordToListDialog({ isOpen, onOpenChange, listId, list
                 <SelectValue placeholder="Select a list" />
               </SelectTrigger>
               <SelectContent>
-                {lists.map((list) => (
+                {lists?.map((list) => (
                   <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>
                 ))}
               </SelectContent>
