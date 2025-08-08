@@ -17,17 +17,17 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [uiLanguage, setUiLanguageState] = useState<string>('en');
   const [storyListId, setStoryListIdState] = useState<string>('');
   const [lastSelectedListId, setLastSelectedListIdState] = useState<string>('');
-  const [theme, setThemeState] = useState<string>('light');
+  const [theme, setThemeState] = useState<string>('light'); // Default to light to avoid undefined state
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // This effect runs only on the client side
     const savedSource = localStorage.getItem('sourceLanguage');
     const savedTarget = localStorage.getItem('targetLanguage');
     const savedUiLang = localStorage.getItem('uiLanguage');
     const savedStoryListId = localStorage.getItem('storyListId');
     const savedLastListId = localStorage.getItem('lastSelectedListId');
     const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedSource) setSourceLanguageState(savedSource);
     if (savedTarget) setTargetLanguageState(savedTarget);
@@ -40,19 +40,21 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         document.documentElement.lang = 'en';
     }
     
+    // Theme logic is now fully client-side
     if (savedTheme) {
       setThemeState(savedTheme);
-    } else if (systemPrefersDark) {
-      setThemeState('dark');
     } else {
-      setThemeState('light');
+      // Check system preference only on the client
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setThemeState(systemPrefersDark ? 'dark' : 'light');
     }
     
-    setIsLoaded(true);
+    setIsLoaded(true); // Mark settings as loaded
   }, []);
 
   // Apply theme changes to DOM
   useEffect(() => {
+    // This also runs only on the client
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -112,6 +114,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     toggleTheme,
   }), [sourceLanguage, targetLanguage, uiLanguage, storyListId, lastSelectedListId, theme]);
 
+  // Prevent children from rendering on the server or before client-side settings are loaded
   if (!isLoaded) {
     return null; 
   }
