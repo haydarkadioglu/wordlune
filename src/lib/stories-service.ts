@@ -51,33 +51,40 @@ export function getStories(language: string, callback: (stories: Story[]) => voi
  */
 export function getPublishedStories(language: string, callback: (stories: Story[]) => void) {
   if (!db || !language) {
+      console.warn(`Cannot fetch stories: db=${!!db}, language=${language}`);
       callback([]);
       return () => {};
   }
 
-  const storiesCollectionRef = collection(db, 'stories', language, 'stories');
-  // Query ONLY for published stories, ordered by creation date.
-  const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
+  try {
+    const storiesCollectionRef = collection(db, 'stories', language, 'stories');
+    // Query ONLY for published stories, ordered by creation date.
+    const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const stories: Story[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      stories.push({ 
-        id: doc.id,
-        ...data,
-        language,
-        createdAt: data.createdAt, // Keep as Timestamp
-        updatedAt: data.updatedAt, // Keep as Timestamp
-      } as Story);
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const stories: Story[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        stories.push({ 
+          id: doc.id,
+          ...data,
+          language,
+          createdAt: data.createdAt, // Keep as Timestamp
+          updatedAt: data.updatedAt, // Keep as Timestamp
+        } as Story);
+      });
+      callback(stories);
+    }, (error) => {
+      console.error(`Error fetching published stories for ${language}: `, error);
+      callback([]);
     });
-    callback(stories);
-  }, (error) => {
-    console.error(`Error fetching published stories for ${language}: `, error);
-    callback([]);
-  });
 
-  return unsubscribe;
+    return unsubscribe;
+  } catch (error) {
+    console.error(`Error setting up published stories listener for ${language}: `, error);
+    callback([]);
+    return () => {};
+  }
 }
 
 
@@ -243,7 +250,7 @@ export async function upsertUserStory(
     storyData: Omit<Story, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'likeCount' | 'commentCount'>,
     storyId?: string
 ): Promise<void> {
-    if (!isFirebaseReady() || !userId) {
+    if (!isFirebaseReady() || !userId || !db) {
         throw new Error("Firebase not ready or user not authenticated.");
     }
     

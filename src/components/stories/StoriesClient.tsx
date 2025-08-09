@@ -46,13 +46,24 @@ const translations = {
 export default function StoriesClient() {
     const [allStories, setAllStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const { uiLanguage, sourceLanguage } = useSettings();
+    const settings = useSettings();
+    
+    // Add safety check for settings
+    if (!settings) {
+        return <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>;
+    }
+    
+    const { uiLanguage, sourceLanguage } = settings;
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
     
     const [levelFilter, setLevelFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
     useEffect(() => {
+        if (!sourceLanguage) return; // Guard against undefined sourceLanguage
+        
         setIsLoading(true);
         // Use the dedicated function for fetching only published stories
         const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
@@ -62,12 +73,22 @@ export default function StoriesClient() {
         return () => unsubscribe();
     }, [sourceLanguage]);
     
-    const uniqueLevels = useMemo(() => [...new Set(allStories.map(s => s.level).filter(Boolean))], [allStories]);
-    const uniqueCategories = useMemo(() => [...new Set(allStories.map(s => s.category).filter(Boolean))], [allStories]);
+    const uniqueLevels = useMemo(() => {
+        if (!Array.isArray(allStories)) return [];
+        return [...new Set(allStories.map(s => s?.level).filter(Boolean))];
+    }, [allStories]);
+    
+    const uniqueCategories = useMemo(() => {
+        if (!Array.isArray(allStories)) return [];
+        return [...new Set(allStories.map(s => s?.category).filter(Boolean))];
+    }, [allStories]);
 
     const filteredStories = useMemo(() => {
+        if (!Array.isArray(allStories)) return [];
+        
         // No need to filter by isPublished here anymore, as the service function already does it.
         return allStories.filter(story => {
+            if (!story) return false;
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
             const categoryMatch = categoryFilter === 'all' || story.category === categoryFilter;
             return levelMatch && categoryMatch;
@@ -117,24 +138,24 @@ export default function StoriesClient() {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredStories.map((story) => (
-                    <Card key={story.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
+                    <Card key={story?.id || Math.random()} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                         <CardHeader>
-                            <CardTitle>{story.title}</CardTitle>
+                            <CardTitle>{story?.title || 'Untitled'}</CardTitle>
                             <div className="flex justify-between items-center pt-2 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1"><User className="h-3 w-3" /> {story.authorName}</span>
-                                <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {story.likeCount}</span>
+                                <span className="flex items-center gap-1"><User className="h-3 w-3" /> {story?.authorName || 'Unknown'}</span>
+                                <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {story?.likeCount || 0}</span>
                             </div>
                             <CardDescription className="flex gap-2 pt-2">
-                                <Badge variant="outline">{story.level}</Badge>
-                                <Badge variant="secondary">{story.category}</Badge>
+                                <Badge variant="outline">{story?.level || 'Unknown'}</Badge>
+                                <Badge variant="secondary">{story?.category || 'Unknown'}</Badge>
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex-grow">
-                           <p className="text-muted-foreground line-clamp-3">{story.content}</p>
+                           <p className="text-muted-foreground line-clamp-3">{story?.content || ''}</p>
                         </CardContent>
                         <CardFooter>
                             <Button asChild className="w-full">
-                                <Link href={`/dashboard/stories/${story.id}?lang=${story.language}`}>
+                                <Link href={`/dashboard/stories/${story?.id}?lang=${story?.language}`}>
                                     {t.readStory} <ArrowRight className="ml-2" />
                                 </Link>
                             </Button>
