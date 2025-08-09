@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserList, ListWord } from "@/types";
-import { getListDetails, getWordsForList, deleteMultipleWordsFromList } from "@/lib/list-service";
+import { getListDetails, getWordsForList, deleteMultipleWordsFromList, getLists } from "@/lib/list-service";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, Trash2, ArrowLeft, Edit, UploadCloud } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,6 +84,7 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
     const { toast } = useToast();
     const { uiLanguage, sourceLanguage } = useSettings();
     const [list, setList] = useState<UserList | null>(null);
+    const [allLists, setAllLists] = useState<UserList[]>([]);
     const [words, setWords] = useState<ListWord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddWordDialogOpen, setIsAddWordDialogOpen] = useState(false);
@@ -104,13 +105,16 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
             };
             fetchListDetails();
 
-            const unsubscribe = getWordsForList(user.uid, sourceLanguage, listId, (fetchedWords) => {
+            const unsubscribeWords = getWordsForList(user.uid, sourceLanguage, listId, (fetchedWords) => {
                 setWords(fetchedWords);
                 setIsLoading(false);
             });
+            
+            const unsubscribeLists = getLists(user.uid, sourceLanguage, setAllLists);
 
             return () => {
-                unsubscribe();
+                unsubscribeWords();
+                unsubscribeLists();
                 setIsSelectionMode(false);
                 setSelectedWords([]);
             };
@@ -359,6 +363,8 @@ export default function ListDetailClient({ listId }: ListDetailClientProps) {
                 isOpen={isAddWordDialogOpen}
                 onOpenChange={setIsAddWordDialogOpen}
                 listId={listId}
+                lists={allLists}
+                onListChange={() => {}}
             />
              <BulkAddToListDialog
                 isOpen={isBulkAddDialogOpen}

@@ -1,5 +1,6 @@
+
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction, setDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction, setDoc, Timestamp } from 'firebase/firestore';
 
 const MAX_LOGIN_HISTORY = 25;
 
@@ -69,5 +70,41 @@ export async function logLoginHistory(userId: string): Promise<void> {
     } catch (error) {
         console.error("Failed to log login history:", error);
         // Don't throw error for login history, it's not critical
+    }
+}
+
+
+/**
+ * Bans a user for a specified duration.
+ * @param userId The ID of the user to ban.
+ * @param duration The duration of the ban ('week' or 'permanent').
+ */
+export async function banUser(userId: string, duration: 'week' | 'permanent'): Promise<void> {
+    if (!db) {
+        throw new Error("Database not initialized.");
+    }
+    
+    const banDocRef = doc(db, 'users', userId, 'moderation', 'ban');
+
+    let bannedUntil: Timestamp | null = null;
+    const isPermanent = duration === 'permanent';
+
+    if (duration === 'week') {
+        const oneWeekFromNow = new Date();
+        oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+        bannedUntil = Timestamp.fromDate(oneWeekFromNow);
+    }
+    
+    const banData = {
+        isPermanent,
+        bannedUntil,
+        bannedAt: serverTimestamp(),
+    };
+
+    try {
+        await setDoc(banDocRef, banData);
+    } catch (error) {
+        console.error(`Failed to ban user ${userId}:`, error);
+        throw new Error("Could not apply ban to the user.");
     }
 }
