@@ -55,38 +55,53 @@ export default function StoriesClient() {
     if (!settings) {
         return (
              <div className="space-y-6">
-                <Skeleton className="h-12 w-1/3" />
-                <Skeleton className="h-16 w-full" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                    {[...Array(3)].map((_, i) => (
-                        <Card key={i}>
-                            <CardHeader>
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                            </CardHeader>
-                            <CardContent>
-                                <Skeleton className="h-10 w-full" />
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="text-center py-20">
+                    <h3 className="text-xl font-semibold text-muted-foreground">
+                        Loading settings...
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                        Please wait while we load your preferences.
+                    </p>
                 </div>
             </div>
         );
     }
     
     const { uiLanguage, sourceLanguage } = settings;
-    const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
+    
+    // Safely get translations with fallback
+    const safeUiLanguage = (uiLanguage === 'en' || uiLanguage === 'tr') ? uiLanguage : 'en';
+    const t = translations[safeUiLanguage];
 
     useEffect(() => {
         if (!sourceLanguage) return; // Guard against undefined sourceLanguage
         
         setIsLoading(true);
-        // Use the dedicated function for fetching only published stories
-        const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
-            setAllStories(fetchedStories);
+        
+        try {
+            // Use the dedicated function for fetching only published stories
+            const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
+                try {
+                    setAllStories(fetchedStories || []);
+                    setIsLoading(false);
+                } catch (callbackError) {
+                    console.error('Error in stories callback:', callbackError);
+                    setAllStories([]);
+                    setIsLoading(false);
+                }
+            });
+            return () => {
+                try {
+                    unsubscribe();
+                } catch (unsubscribeError) {
+                    console.warn('Error unsubscribing from stories:', unsubscribeError);
+                }
+            };
+        } catch (effectError) {
+            console.error('Error setting up stories subscription:', effectError);
+            setAllStories([]);
             setIsLoading(false);
-        });
-        return () => unsubscribe();
+        }
     }, [sourceLanguage]);
     
     const uniqueLevels = useMemo(() => {

@@ -29,10 +29,11 @@ export interface SettingsContextType {
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export const useSettings = (): SettingsContextType => {
+export const useSettings = (): SettingsContextType | null => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    throw new Error('useSettings must be used within a SettingsProvider');
+    console.warn('useSettings called outside of SettingsProvider');
+    return null;
   }
   return context;
 };

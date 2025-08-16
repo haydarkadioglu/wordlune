@@ -63,18 +63,29 @@ export function getPublishedStories(language: string, callback: (stories: Story[
     const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const stories: Story[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        stories.push({ 
-          id: doc.id,
-          ...data,
-          language: lang,
-          createdAt: data.createdAt, // Keep as Timestamp
-          updatedAt: data.updatedAt, // Keep as Timestamp
-        } as Story);
-      });
-      callback(stories);
+      try {
+        const stories: Story[] = [];
+        querySnapshot.forEach((doc) => {
+          try {
+            const data = doc.data();
+            if (data && typeof data === 'object') {
+              stories.push({ 
+                id: doc.id,
+                ...data,
+                language: lang,
+                createdAt: data.createdAt, // Keep as Timestamp
+                updatedAt: data.updatedAt, // Keep as Timestamp
+              } as Story);
+            }
+          } catch (docError) {
+            console.warn(`Error processing document ${doc.id}:`, docError);
+          }
+        });
+        callback(stories);
+      } catch (snapshotError) {
+        console.error(`Error processing query snapshot for ${lang}:`, snapshotError);
+        callback([]);
+      }
     }, (error) => {
       console.error(`Error fetching published stories for ${lang}: `, error);
       callback([]);

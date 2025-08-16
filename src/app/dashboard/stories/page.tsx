@@ -1,6 +1,6 @@
 
-import StoriesClient from "@/components/stories/StoriesClient";
+import SafeStoriesClient from "@/components/stories/SafeStoriesClient";
 
 export default function StoriesPage() {
-    return <StoriesClient />;
+    return <SafeStoriesClient />;
 }
