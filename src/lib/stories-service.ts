@@ -55,10 +55,10 @@ export function getPublishedStories(language: string, callback: (stories: Story[
       callback([]);
       return () => {};
   }
-<<<<<<< HEAD
 
   try {
-    const storiesCollectionRef = collection(db, 'stories', language, 'stories');
+    const lang = language.toLowerCase();
+    const storiesCollectionRef = collection(db, 'stories', lang, 'stories');
     // Query ONLY for published stories, ordered by creation date.
     const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
 
@@ -69,40 +69,16 @@ export function getPublishedStories(language: string, callback: (stories: Story[
         stories.push({ 
           id: doc.id,
           ...data,
-          language,
+          language: lang,
           createdAt: data.createdAt, // Keep as Timestamp
           updatedAt: data.updatedAt, // Keep as Timestamp
         } as Story);
       });
       callback(stories);
     }, (error) => {
-      console.error(`Error fetching published stories for ${language}: `, error);
+      console.error(`Error fetching published stories for ${lang}: `, error);
       callback([]);
     });
-=======
-  const lang = language.toLowerCase();
-  const storiesCollectionRef = collection(db, 'stories', lang, 'stories');
-  // Query ONLY for published stories, ordered by creation date.
-  const q = query(storiesCollectionRef, where("isPublished", "==", true), orderBy('createdAt', 'desc'));
-
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const stories: Story[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      stories.push({ 
-        id: doc.id,
-        ...data,
-        language: lang,
-        createdAt: data.createdAt, // Keep as Timestamp
-        updatedAt: data.updatedAt, // Keep as Timestamp
-      } as Story);
-    });
-    callback(stories);
-  }, (error) => {
-    console.error(`Error fetching published stories for ${lang}: `, error);
-    callback([]);
-  });
->>>>>>> 965d52de6f4888312ba6bbc0cb38927f0894653e
 
     return unsubscribe;
   } catch (error) {

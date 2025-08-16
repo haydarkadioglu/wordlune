@@ -47,19 +47,6 @@ export default function StoriesClient() {
     const [allStories, setAllStories] = useState<Story[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const settings = useSettings();
-<<<<<<< HEAD
-    
-    // Add safety check for settings
-    if (!settings) {
-        return <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>;
-    }
-    
-    const { uiLanguage, sourceLanguage } = settings;
-    const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
-=======
->>>>>>> 965d52de6f4888312ba6bbc0cb38927f0894653e
     
     const [levelFilter, setLevelFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -91,7 +78,6 @@ export default function StoriesClient() {
     const t = translations[uiLanguage as 'en' | 'tr' || 'tr'];
 
     useEffect(() => {
-<<<<<<< HEAD
         if (!sourceLanguage) return; // Guard against undefined sourceLanguage
         
         setIsLoading(true);
@@ -101,16 +87,6 @@ export default function StoriesClient() {
             setIsLoading(false);
         });
         return () => unsubscribe();
-=======
-        if (sourceLanguage) {
-            setIsLoading(true);
-            const unsubscribe = getPublishedStories(sourceLanguage, (fetchedStories) => {
-                setAllStories(fetchedStories);
-                setIsLoading(false);
-            });
-            return () => unsubscribe();
-        }
->>>>>>> 965d52de6f4888312ba6bbc0cb38927f0894653e
     }, [sourceLanguage]);
     
     const uniqueLevels = useMemo(() => {
@@ -124,12 +100,9 @@ export default function StoriesClient() {
     }, [allStories]);
 
     const filteredStories = useMemo(() => {
-<<<<<<< HEAD
         if (!Array.isArray(allStories)) return [];
         
         // No need to filter by isPublished here anymore, as the service function already does it.
-=======
->>>>>>> 965d52de6f4888312ba6bbc0cb38927f0894653e
         return allStories.filter(story => {
             if (!story) return false;
             const levelMatch = levelFilter === 'all' || story.level === levelFilter;
