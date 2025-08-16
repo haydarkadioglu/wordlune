@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud } from 'lucide-react';
-import { bulkGenerateWordDetails } from '@/ai/flows/bulk-generate-word-details-flow';
+import { bulkGenerateWordDetails } from '@/lib/ai-client';
 import { useSettings } from '@/hooks/useSettings';
 import type { UserList } from '@/types';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';

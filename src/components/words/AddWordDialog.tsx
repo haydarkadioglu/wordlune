@@ -12,9 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
-import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
-import { generatePhoneticPronunciation } from '@/ai/flows/generate-phonetic-pronunciation-flow';
-import { translateWord } from '@/ai/flows/translate-word-flow';
+import { generateExampleSentence } from '@/lib/ai-client';
+import { generatePhoneticPronunciation } from '@/lib/ai-client';
+import { translateWord } from '@/lib/ai-client';
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from '@/hooks/useSettings';
 

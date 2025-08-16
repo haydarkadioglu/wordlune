@@ -15,8 +15,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
-import { generateExampleSentence } from '@/ai/flows/generate-example-sentence-flow';
-import { translateWord } from '@/ai/flows/translate-word-flow';
+import { generateExampleSentence } from '@/lib/ai-client';
+import { translateWord } from '@/lib/ai-client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { WordCategory, UserList } from '@/types';
 

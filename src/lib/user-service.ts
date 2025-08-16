@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, getDocs, writeBatch, serverTimestamp, doc, getDoc, runTransaction, setDoc, Timestamp, where, limit } from 'firebase/firestore';
 
 const MAX_LOGIN_HISTORY = 25;
 
@@ -106,5 +106,32 @@ export async function banUser(userId: string, duration: 'week' | 'permanent'): P
     } catch (error) {
         console.error(`Failed to ban user ${userId}:`, error);
         throw new Error("Could not apply ban to the user.");
+    }
+}
+
+/**
+ * Gets user's email by their username/displayName.
+ * This function searches through the users collection to find a user by their displayName.
+ * @param username The username/displayName to search for.
+ * @returns The user's email if found, null otherwise.
+ */
+export async function getEmailForUsername(username: string): Promise<string | null> {
+    if (!db) return null;
+    
+    try {
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, where('displayName', '==', username), limit(1));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+            return userData.email || null;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error finding email for username:', error);
+        return null;
     }
 }

@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import type { Story, UserList } from "@/types";
 import { getStoryById } from "@/lib/stories-service";
-import { translateWord } from "@/ai/flows/translate-word-flow";
+import { translateWord } from "@/lib/ai-client";
 import { addWordToList, createList, getLists, getListDetails } from "@/lib/list-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, ArrowLeft, PlusCircle } from "lucide-react";

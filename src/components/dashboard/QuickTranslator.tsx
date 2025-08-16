@@ -9,7 +9,7 @@ import { Loader2, Sparkles, Languages, PlusCircle, ArrowRightLeft } from 'lucide
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { translateWord } from '@/ai/flows/translate-word-flow';
+import { translateWord } from '@/lib/ai-client';
 import { useSettings, SUPPORTED_LANGUAGES } from '@/hooks/useSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserList } from '@/types';

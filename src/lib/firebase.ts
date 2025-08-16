@@ -24,7 +24,7 @@ let analytics: Analytics | undefined;
 let analyticsInitialized = false;
 
 // Only initialize if the API key and Project ID are provided, to prevent crashes.
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+if (typeof window !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.projectId) {
   try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
@@ -46,12 +46,14 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 } else {
     // This is not an error, but a warning for the developer.
     // The user might not have set up their .env file yet.
-    console.warn("Firebase credentials are not fully set in .env file. Firebase features will be disabled.");
-    console.warn("Missing:", {
-      apiKey: !firebaseConfig.apiKey,
-      projectId: !firebaseConfig.projectId,
-      authDomain: !firebaseConfig.authDomain,
-    });
+    if (typeof window !== 'undefined') {
+      console.warn("Firebase credentials are not fully set in .env file. Firebase features will be disabled.");
+      console.warn("Missing:", {
+        apiKey: !firebaseConfig.apiKey,
+        projectId: !firebaseConfig.projectId,
+        authDomain: !firebaseConfig.authDomain,
+      });
+    }
 }
 
 /**

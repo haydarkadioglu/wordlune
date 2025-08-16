@@ -114,14 +114,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     toggleTheme,
   }), [sourceLanguage, targetLanguage, uiLanguage, storyListId, lastSelectedListId, theme]);
 
-  // Prevent children from rendering on the server or before client-side settings are loaded
-  if (!isLoaded) {
-    return null; 
-  }
-
   return (
     <SettingsContext.Provider value={value}>
-      {children}
+      <div suppressHydrationWarning>
+        {isLoaded ? children : <div />}
+      </div>
     </SettingsContext.Provider>
   );
 };

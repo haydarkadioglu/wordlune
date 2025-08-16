@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from "@/components/ui/toaster";
 import PageTransitionWrapper from '@/components/common/PageTransitionWrapper';
 import CookieConsent from '@/components/common/CookieConsent';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'WordLune - Master Your Vocabulary',
@@ -25,13 +26,15 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          <PageTransitionWrapper>
-            {children}
-          </PageTransitionWrapper>
-          <Toaster />
-          <CookieConsent />
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <PageTransitionWrapper>
+              {children}
+            </PageTransitionWrapper>
+            <Toaster />
+            <CookieConsent />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
