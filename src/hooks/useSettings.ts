@@ -29,11 +29,25 @@ export interface SettingsContextType {
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export const useSettings = (): SettingsContextType | null => {
+export const useSettings = (): SettingsContextType => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    console.warn('useSettings called outside of SettingsProvider');
-    return null;
+    console.warn('useSettings called outside of SettingsProvider, returning default values');
+    return {
+      sourceLanguage: 'English',
+      targetLanguage: 'Turkish',
+      setSourceLanguage: () => {},
+      setTargetLanguage: () => {},
+      uiLanguage: 'en',
+      setUiLanguage: () => {},
+      storyListId: '',
+      setStoryListId: () => {},
+      lastSelectedListId: '',
+      setLastSelectedListId: () => {},
+      theme: 'light',
+      setTheme: () => {},
+      toggleTheme: () => {}
+    };
   }
   return context;
 };

@@ -154,38 +154,54 @@ export function getAllPublishedUserStories(callback: (stories: Story[]) => void)
  */
 export function getStoriesByAuthor(authorId: string, callback: (stories: Story[]) => void) {
     if (!db || !authorId) {
+        console.warn(`Cannot fetch stories by author: db=${!!db}, authorId=${authorId}`);
         callback([]);
         return () => {};
     }
 
-    const storiesQuery = query(
-        collectionGroup(db, 'stories'),
-        where('authorId', '==', authorId),
-        orderBy('updatedAt', 'desc')
-    );
+    try {
+        const storiesQuery = query(
+            collectionGroup(db, 'stories'),
+            where('authorId', '==', authorId),
+            orderBy('updatedAt', 'desc')
+        );
 
-    const unsubscribe = onSnapshot(storiesQuery, (querySnapshot) => {
-        const stories: Story[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const language = doc.ref.parent.parent?.id;
-            if (language) {
-                 stories.push({
-                    id: doc.id,
-                    ...data,
-                    language: language,
-                    createdAt: data.createdAt, // Keep as Firestore Timestamp
-                    updatedAt: data.updatedAt, // Keep as Firestore Timestamp
-                } as Story);
+        const unsubscribe = onSnapshot(storiesQuery, (querySnapshot) => {
+            try {
+                const stories: Story[] = [];
+                querySnapshot.forEach((doc) => {
+                    try {
+                        const data = doc.data();
+                        const language = doc.ref.parent.parent?.id;
+                        if (language && data && typeof data === 'object') {
+                            stories.push({
+                                id: doc.id,
+                                ...data,
+                                language: language,
+                                createdAt: data.createdAt, // Keep as Firestore Timestamp
+                                updatedAt: data.updatedAt, // Keep as Firestore Timestamp
+                            } as Story);
+                        }
+                    } catch (docError) {
+                        console.warn(`Error processing story document ${doc.id} for author ${authorId}:`, docError);
+                    }
+                });
+                callback(stories);
+            } catch (snapshotError) {
+                console.error(`Error processing stories snapshot for author ${authorId}:`, snapshotError);
+                callback([]);
             }
+        }, (error) => {
+            console.error(`Error fetching stories for author ${authorId}: `, error);
+            callback([]);
         });
-        callback(stories);
-    }, (error) => {
-        console.error(`Error fetching stories for author ${authorId}: `, error);
-        callback([]);
-    });
 
-    return unsubscribe;
+        return unsubscribe;
+    } catch (error) {
+        console.error(`Error setting up stories listener for author ${authorId}: `, error);
+        callback([]);
+        return () => {};
+    }
 }
 
 

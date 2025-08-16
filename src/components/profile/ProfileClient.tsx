@@ -31,12 +31,30 @@ export default function ProfileClient() {
         }
 
         setLoadingStories(true);
-        const unsubscribe = getStoriesByAuthor(user.uid, (userStories) => {
-            setStories(userStories);
-            setLoadingStories(false);
-        });
+        try {
+            const unsubscribe = getStoriesByAuthor(user.uid, (userStories) => {
+                try {
+                    setStories(userStories || []);
+                    setLoadingStories(false);
+                } catch (callbackError) {
+                    console.error('Error in profile stories callback:', callbackError);
+                    setStories([]);
+                    setLoadingStories(false);
+                }
+            });
 
-        return () => unsubscribe();
+            return () => {
+                try {
+                    unsubscribe();
+                } catch (unsubscribeError) {
+                    console.warn('Error unsubscribing from profile stories:', unsubscribeError);
+                }
+            };
+        } catch (effectError) {
+            console.error('Error setting up profile stories subscription:', effectError);
+            setStories([]);
+            setLoadingStories(false);
+        }
     }, [user, authLoading, router]);
 
     const handleDeleteStory = async (story: Story) => {

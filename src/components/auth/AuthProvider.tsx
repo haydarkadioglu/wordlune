@@ -167,18 +167,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     setLoading(true);
     if (!auth) {
+      console.warn('Firebase auth not available');
       setLoading(false);
       return;
     }
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await fetchUserProfile(firebaseUser);
-      } else {
-        setUser(null);
-      }
+    
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        try {
+          if (firebaseUser) {
+            await fetchUserProfile(firebaseUser);
+          } else {
+            setUser(null);
+          }
+        } catch (userError) {
+          console.error('Error in auth state change handler:', userError);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
+      });
+      return () => unsubscribe();
+    } catch (authError) {
+      console.error('Error setting up auth state listener:', authError);
       setLoading(false);
-    });
-    return () => unsubscribe();
+    }
   }, [fetchUserProfile]);
 
 

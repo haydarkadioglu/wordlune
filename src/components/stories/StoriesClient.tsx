@@ -51,29 +51,11 @@ export default function StoriesClient() {
     const [levelFilter, setLevelFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-    // Wait for settings to be loaded
-    if (!settings) {
-        return (
-             <div className="space-y-6">
-                <div className="text-center py-20">
-                    <h3 className="text-xl font-semibold text-muted-foreground">
-                        Loading settings...
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        Please wait while we load your preferences.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-    
     const { uiLanguage, sourceLanguage } = settings;
     
     // Safely get translations with fallback
     const safeUiLanguage = (uiLanguage === 'en' || uiLanguage === 'tr') ? uiLanguage : 'en';
-    const t = translations[safeUiLanguage];
-
-    useEffect(() => {
+    const t = translations[safeUiLanguage];    useEffect(() => {
         if (!sourceLanguage) return; // Guard against undefined sourceLanguage
         
         setIsLoading(true);
